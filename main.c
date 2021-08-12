@@ -10,6 +10,10 @@ static const char *outdir;
 static FILE* md;
 static FILE* html;
 
+char line[1000] = "\0";
+
+bool hasMoreLines();
+void readLine();
 
 void usage(char *argv0)
 {
@@ -54,5 +58,33 @@ int main(int argc, char* argv[]){
   if (!(html = fopen(htmlfile, "w")))
     err(1, htmlfile);
 
+  while (hasMoreLines())
+  {
+    readLine();
+    printf("%s\n", line);
+  }
+
   return 0;
+}
+
+bool hasMoreLines()
+{
+  int a;
+  if ((a = fgetc(md)) != EOF)
+  {
+    ungetc(a, md);
+    return true;
+  }
+  return false;
+}
+
+void readLine()
+{
+  char* p = line;
+  int c;
+
+  while ((c = fgetc(md)) != '\n')
+    * p++ = c;
+
+  *p = '\0';
 }
