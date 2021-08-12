@@ -22,6 +22,9 @@ void parseText(char* start, char* end);
 
 char* searchOne(char c, char* start, char* end);
 char* searchTwo(char c1, char c2, char* start, char* end);
+char* tagSearchOne(char* current, char* end, char* open, char* close);
+char* tagSearchTwo(char* current, char* end, char* open, char* close);
+char* tagSearchLink(char* current, char* end);
 
 void usage(char *argv0)
 {
@@ -129,68 +132,69 @@ void splitLine()
   text = line;  // text is a whole line
 }
 
-void parseText(char* start, char* end)
+void parseText(char* current, char* end)
 {
-  while (start < end)
+  while  (current < end)
   {
-    char* next = start + 1;
-    char* p;
-    switch (*start)
+    char* control = current;   // if current == control after the search nothing has been found
+    if (*current == *(current + 1))    // handle tags that require double prefix
     {
-    case '*':
-    case '_':
-      if (*next == *start)
-      {
-        p = searchTwo(*start, *start, next + 1, end);
-        if (p == end) break;
-        printf("<strong>");
-        parseText(next + 1, p);
-        printf("</strong>");
-        start = p + 2;
-        continue;
-      }
-
-      p = searchOne(*start, next + 1, end);
-      if (p == end) break;
-      printf("<em>");
-      parseText(start + 1, p);
-      printf("</em>");
-      start = p + 1;
-      continue;
-    case '\"':
-      p = searchOne(*start, next + 1, end);
-      if (p == end) break;
-      printf("&quot;");
-      parseText(start + 1, p);
-      printf("&quot;");
-      start = p + 1;
-      continue;
-    case '~':
-      if (*next == *start)
-      {
-        p = searchTwo(*start, *start, next + 1, end);
-        if (p == end) break;
-        printf("<s>");
-        parseText(next + 1, p);
-        printf("</s>");
-        start = p + 2;
-        continue;
-      }
-      break;
-    case '[':
-      char* p1 = searchTwo(']', '(', next + 1, end);
-      if (p1 == end) break;
-      char* p2 = searchOne(')', p1 + 2, end);
-      if (p2 == end) break;
-      start = p1 + 2;
-      printf("<a href=\"%.*s\">%.*s</a>", p2 - start, start, p1 - next, next);
-      start = p2 + 1;
-      continue;
+      if (*current == '*' || *current == '_')
+        current = tagSearchTwo(current, end, "<strong>", "</strong>");
+      else if (*current == '~')
+        current = tagSearchTwo(current, end, "<s>", "</s>");
     }
-    printf("%c", *start);
-    start = next;
+    else     // handle tags that require a single prefix
+    {
+      if (*current == '*' || *current == '_')
+        current = tagSearchOne(current, end, "<em>", "</em>");
+      else if (*current == '\"')
+        current = tagSearchOne(current, end, "&quot;", "&quot;");
+      else if (*current == '[')
+        current = tagSearchLink(current, end);
+    }
+    if (control != current) continue;   // if there has been change skip already parsed text
+    printf("%c", *current);
+    current++;
   }
 }
+
+char* tagSearchLink(char* current, char* end)
+{
+  char* next = current + 1;
+  char* p1 = searchTwo(']', '(', next, end);
+  if (p1 == end) return current;
+
+  char* p2 = searchOne(')', p1 + 2, end);
+  if (p2 == end) return current;
+
+  current = p1 + 2;
+  printf("<a href=\"%.*s\">%.*s</a>", p2 - current, current, p1 - next, next);
+  return p2 + 1;
+}
+
+char* tagSearchOne(char* current, char* end, char* open, char* close)
+{
+  char* start = current + 1;
+  char* p = searchOne(* current, start, end);
+  if (p == end) return current;
+  printf("%s", open);
+  parseText(current + 1, p);
+  printf("%s", close);
+  return p + 1;
+}
+
+char* tagSearchTwo(char* current, char* end, char* open, char* close)
+{
+  char* start = current + 2;
+  char* p = searchTwo(*current, *current, start, end);
+  if (p == end) return current;
+  printf("%s", open);
+  parseText(start, p);
+  printf("%s", close);
+  return p + 2;
+}
+
 
 char* searchOne(char c, char* start, char* end)
 {
@@ -207,10 +211,9 @@ char* searchTwo(char c1, char c2, char* start, char* end)
 {
   while (start < end)
   {
-    char* next = start + 1;
-    if (*start == c1 && *next == c2)
+    if (*start == c1 && *(start + 1) == c2)
       return start;
-    start = next;
+    start++;
   }
   return end;
 }
