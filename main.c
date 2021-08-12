@@ -7,8 +7,8 @@
 
 static const char *articledir;
 static const char *outdir;
-
-static char *name = "";
+static FILE* md;
+static FILE* html;
 
 
 void usage(char *argv0)
@@ -18,7 +18,7 @@ void usage(char *argv0)
 }
 
 int main(int argc, char* argv[]){
-  char  articledirabs[PATH_MAX + 1], outdirabs[PATH_MAX + 1];
+  char  articledirabs[PATH_MAX + 1], outdirabs[PATH_MAX + 1], mdfile[PATH_MAX + 1], htmlfile[PATH_MAX + 1];
   int i;
 
   for (i = 1; i < argc; i++) {
@@ -45,10 +45,14 @@ int main(int argc, char* argv[]){
     if (!realpath(outdir, outdirabs))
       err(1, outdir);
 
-  printf("Article dir: %s\n", articledir);
-  printf("Article dir abs: %s\n", articledirabs);
-  printf("Out dir: %s\n", outdir);
-  printf("Out dir abs: %s\n", outdirabs);
+
+  sprintf(mdfile, "%s/article.md", articledirabs);
+  sprintf(htmlfile, "%s%s.html", outdirabs, strrchr(articledirabs, '/'));
+
+  if (!(md = fopen(mdfile, "r")))
+    err(1, mdfile);
+  if (!(html = fopen(htmlfile, "w")))
+    err(1, htmlfile);
 
   return 0;
 }
