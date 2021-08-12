@@ -189,8 +189,6 @@ char* tagSearchImg(char* current, char* end)
     printf("<img src=\"%s\" alt=\"%s\" title=%s\>", p1 + 2, current + 2, blank + 1);
   }
 
-
-  current = p1 + 2;
   return p2 + 1;
 }
 
@@ -234,22 +232,12 @@ char* tagSearchTwo(char* current, char* end, char* open, char* close)
 
 char* searchOne(char c, char* start, char* end)
 {
-  while (start < end)
-  {
-    if (*start == c)
-      return start;
-    start++;
-  }
-  return end;
+  char* p = strchr(start, c);
+  return (p != NULL && p < end) ? p : end;
 }
 
 char* searchTwo(char c1, char c2, char* start, char* end)
 {
-  while (start < end)
-  {
-    if (*start == c1 && *(start + 1) == c2)
-      return start;
-    start++;
-  }
-  return end;
+  char* p = strchr(start, c1);
+  return (p != NULL && *(p + 1) == c2 && p < end) ? p : end;
 }
