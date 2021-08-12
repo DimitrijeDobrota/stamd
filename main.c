@@ -125,7 +125,7 @@ void splitLine()
   else if (strcmp(linebuffer, "####") == 0) return;
   else if (strcmp(linebuffer, "#####") == 0) return;
   else if (strcmp(linebuffer, "######") == 0) return;
-  else if (strcmp(linebuffer, "---") == 0) return;
+  else if (strcmp(linebuffer, "---") == 0 || strcmp(linebuffer, "___") == 0 || strcmp(linebuffer, "***") == 0) return;
   else if (strcmp(linebuffer, "-") == 0 || strcmp(linebuffer, "+") == 0 || strcmp(linebuffer, "*") == 0) return;
   else if (linebuffer[-1] == '.') return;
 
@@ -150,6 +150,8 @@ void parseText(char* current, char* end)
         current = tagSearchOne(current, end, "<em>", "</em>");
       else if (*current == '\"')
         current = tagSearchOne(current, end, "&quot;", "&quot;");
+      else if (*current == '`')
+        current = tagSearchOne(current, end, "<code>", "<code>");
       else if (*current == '[')
         current = tagSearchLink(current, end);
     }
