@@ -25,6 +25,7 @@ char* searchTwo(char c1, char c2, char* start, char* end);
 char* tagSearchOne(char* current, char* end, char* open, char* close);
 char* tagSearchTwo(char* current, char* end, char* open, char* close);
 char* tagSearchLink(char* current, char* end);
+char* tagSearchImg(char* current, char* end);
 
 void usage(char *argv0)
 {
@@ -154,6 +155,8 @@ void parseText(char* current, char* end)
         current = tagSearchOne(current, end, "<code>", "<code>");
       else if (*current == '[')
         current = tagSearchLink(current, end);
+      else if (*current == '!')
+        current = tagSearchImg(current, end);
     }
     if (control != current) continue;   // if there has been change skip already parsed text
     printf("%c", *current);
@@ -161,17 +164,48 @@ void parseText(char* current, char* end)
   }
 }
 
-char* tagSearchLink(char* current, char* end)
+char* tagSearchImg(char* current, char* end)
 {
-  char* next = current + 1;
-  char* p1 = searchTwo(']', '(', next, end);
+  if (*(current + 1) != '[') return current;
+
+  char* p1 = searchTwo(']', '(', current, end);
   if (p1 == end) return current;
 
   char* p2 = searchOne(')', p1 + 2, end);
   if (p2 == end) return current;
 
+  *p1 = '\0';
+  *p2 = '\0';
+
+  char* blank = strchr(p1 + 2, ' ');
+
+  if (blank == NULL)
+  {
+    printf("<img src=\"%s\" alt=\"%s\">", p1 + 2, current + 2);
+  }
+  else
+  {
+    *blank = '\0';
+    printf("<img src=\"%s\" alt=\"%s\" title=%s\>", p1 + 2, current + 2, blank + 1);
+  }
+
+
   current = p1 + 2;
-  printf("<a href=\"%.*s\">%.*s</a>", p2 - current, current, p1 - next, next);
+  return p2 + 1;
+}
+
+char* tagSearchLink(char* current, char* end)
+{
+  char* p1 = searchTwo(']', '(', current, end);
+  if (p1 == end) return current;
+
+  char* p2 = searchOne(')', p1, end);
+  if (p2 == end) return current;
+
+  *p1 = '\0';
+  *p2 = '\0';
+
+  printf("<a href=\"%s\">%s</a>", p1 + 2, current + 1);
   return p2 + 1;
 }
 
