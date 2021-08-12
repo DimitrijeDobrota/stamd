@@ -1,9 +1,9 @@
 #include <err.h>
 #include <limits.h>
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-
 
 static const char *articledir;
 static const char *outdir;
@@ -13,10 +13,15 @@ static FILE* html;
 char line[1000] = "\0";
 char linebuffer[100] = "\0";
 char* text;
+char* lineEnd;
 
 bool hasMoreLines();
 void readLine();
 void splitLine();
+void parseText(char* start, char* end);
+
+char* searchOne(char c, char* start, char* end);
+char* searchTwo(char c, char* start, char* end);
 
 void usage(char *argv0)
 {
@@ -71,7 +76,8 @@ int main(int argc, char* argv[])
     readLine();
     if (line[0] == '\0') continue;
     splitLine();
-    printf("%s\n", text);
+    parseText(text, lineEnd);
+    printf("\n");
   }
 
   return 0;
@@ -97,6 +103,7 @@ void readLine()
     * p++ = c;
 
   *p = '\0';
+  lineEnd = p;
 }
 
 void splitLine()
@@ -120,4 +127,72 @@ void splitLine()
   else if (linebuffer[-1] == '.') return;
 
   text = line;  // text is a whole line
+}
+
+void parseText(char* start, char* end)
+{
+  while (start < end)
+  {
+    char* next = start + 1;
+    switch (*start)
+    {
+    case '*':
+    case '_':
+      if (*next == *start)
+      {
+        char* p = searchTwo(*start, next + 1, end);
+        if (p == end) break;
+        printf("<strong>");
+        parseText(next + 1, p);
+        printf("</strong>");
+        start = p + 2;
+        continue;
+      }
+
+      char* p = searchOne(*start, next + 1, end);
+      if (p == end) break;
+      printf("<em>");
+      parseText(start + 1, p);
+      printf("</em>");
+      start = p + 1;
+      continue;
+    case '~':
+      if (*next == *start)
+      {
+        char* p = searchTwo(*start, next + 1, end);
+        if (p == end) break;
+        printf("<s>");
+        parseText(next + 1, p);
+        printf("</s>");
+        start = p + 2;
+        continue;
+      }
+      break;
+    }
+    printf("%c", *start);
+    start = next;
+  }
+}
+
+char* searchOne(char c, char* start, char* end)
+{
+  while (start < end)
+  {
+    if (*start == c)
+      return start;
+    start++;
+  }
+  return end;
+}
+
+char* searchTwo(char c, char* start, char* end)
+{
+  while (start < end)
+  {
+    char* next = start + 1;
+    if (*start == c && *next == c)
+      return start;
+    start = next;
+  }
+  return end;
 }
