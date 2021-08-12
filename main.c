@@ -11,9 +11,12 @@ static FILE* md;
 static FILE* html;
 
 char line[1000] = "\0";
+char linebuffer[100] = "\0";
+char* text;
 
 bool hasMoreLines();
 void readLine();
+void splitLine();
 
 void usage(char *argv0)
 {
@@ -66,7 +69,9 @@ int main(int argc, char* argv[])
   while (hasMoreLines())
   {
     readLine();
-    printf("%s\n", line);
+    if (line[0] == '\0') continue;
+    splitLine();
+    printf("%s\n", text);
   }
 
   return 0;
@@ -92,4 +97,27 @@ void readLine()
     * p++ = c;
 
   *p = '\0';
+}
+
+void splitLine()
+{
+  char *p = line;
+  char *b = linebuffer;   // save potential line tag
+
+  while (*p != ' ' && *p != '\0')
+    *b++ = *p++;
+  *b = '\0';
+  text = ++p;
+
+  if (strcmp(linebuffer, "#") == 0) return;
+  else if (strcmp(linebuffer, "##") == 0) return;
+  else if (strcmp(linebuffer, "###") == 0) return;
+  else if (strcmp(linebuffer, "####") == 0) return;
+  else if (strcmp(linebuffer, "#####") == 0) return;
+  else if (strcmp(linebuffer, "######") == 0) return;
+  else if (strcmp(linebuffer, "---") == 0) return;
+  else if (strcmp(linebuffer, "-") == 0 || strcmp(linebuffer, "+") == 0 || strcmp(linebuffer, "*") == 0) return;
+  else if (linebuffer[-1] == '.') return;
+
+  text = line;  // text is a whole line
 }
