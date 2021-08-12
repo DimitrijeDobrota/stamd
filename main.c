@@ -21,7 +21,7 @@ void splitLine();
 void parseText(char* start, char* end);
 
 char* searchOne(char c, char* start, char* end);
-char* searchTwo(char c, char* start, char* end);
+char* searchTwo(char c1, char c2, char* start, char* end);
 
 void usage(char *argv0)
 {
@@ -140,7 +140,7 @@ void parseText(char* start, char* end)
     case '_':
       if (*next == *start)
       {
-        char* p = searchTwo(*start, next + 1, end);
+        char* p = searchTwo(*start, *start, next + 1, end);
         if (p == end) break;
         printf("<strong>");
         parseText(next + 1, p);
@@ -159,7 +159,7 @@ void parseText(char* start, char* end)
     case '~':
       if (*next == *start)
       {
-        char* p = searchTwo(*start, next + 1, end);
+        char* p = searchTwo(*start, *start, next + 1, end);
         if (p == end) break;
         printf("<s>");
         parseText(next + 1, p);
@@ -168,6 +168,15 @@ void parseText(char* start, char* end)
         continue;
       }
       break;
+    case '[':
+      char* p1 = searchTwo(']', '(', next + 1, end);
+      if (p1 == end) break;
+      char* p2 = searchOne(')', p1 + 2, end);
+      if (p2 == end) break;
+      start = p1 + 2;
+      printf("<a href=\"%.*s\">%.*s</a>", p2 - start, start, p1 - next, next);
+      start = p2 + 1;
+      continue;
     }
     printf("%c", *start);
     start = next;
@@ -185,12 +194,12 @@ char* searchOne(char c, char* start, char* end)
   return end;
 }
 
-char* searchTwo(char c, char* start, char* end)
+char* searchTwo(char c1, char c2, char* start, char* end)
 {
   while (start < end)
   {
     char* next = start + 1;
-    if (*start == c && *next == c)
+    if (*start == c1 && *next == c2)
       return start;
     start = next;
   }
