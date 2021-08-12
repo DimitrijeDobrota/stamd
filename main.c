@@ -134,13 +134,14 @@ void parseText(char* start, char* end)
   while (start < end)
   {
     char* next = start + 1;
+    char* p;
     switch (*start)
     {
     case '*':
     case '_':
       if (*next == *start)
       {
-        char* p = searchTwo(*start, *start, next + 1, end);
+        p = searchTwo(*start, *start, next + 1, end);
         if (p == end) break;
         printf("<strong>");
         parseText(next + 1, p);
@@ -149,17 +150,25 @@ void parseText(char* start, char* end)
         continue;
       }
 
-      char* p = searchOne(*start, next + 1, end);
+      p = searchOne(*start, next + 1, end);
       if (p == end) break;
       printf("<em>");
       parseText(start + 1, p);
       printf("</em>");
       start = p + 1;
       continue;
+    case '\"':
+      p = searchOne(*start, next + 1, end);
+      if (p == end) break;
+      printf("&quot;");
+      parseText(start + 1, p);
+      printf("&quot;");
+      start = p + 1;
+      continue;
     case '~':
       if (*next == *start)
       {
-        char* p = searchTwo(*start, *start, next + 1, end);
+        p = searchTwo(*start, *start, next + 1, end);
         if (p == end) break;
         printf("<s>");
         parseText(next + 1, p);
