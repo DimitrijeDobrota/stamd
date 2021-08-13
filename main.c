@@ -18,6 +18,7 @@ char* lineEnd;
 bool hasMoreLines();
 void readLine();
 void splitLine();
+void parseLine();
 void parseText(char* start, char* end);
 
 char* searchOne(char c, char* start, char* end);
@@ -80,8 +81,7 @@ int main(int argc, char* argv[])
     readLine();
     if (line[0] == '\0') continue;
     splitLine();
-    parseText(text, lineEnd);
-    printf("\n");
+    parseLine();
   }
 
   return 0;
@@ -119,18 +119,72 @@ void splitLine()
     *b++ = *p++;
   *b = '\0';
   text = ++p;
+}
 
-  if (strcmp(linebuffer, "#") == 0) return;
-  else if (strcmp(linebuffer, "##") == 0) return;
-  else if (strcmp(linebuffer, "###") == 0) return;
-  else if (strcmp(linebuffer, "####") == 0) return;
-  else if (strcmp(linebuffer, "#####") == 0) return;
-  else if (strcmp(linebuffer, "######") == 0) return;
-  else if (strcmp(linebuffer, "---") == 0 || strcmp(linebuffer, "___") == 0 || strcmp(linebuffer, "***") == 0) return;
-  else if (strcmp(linebuffer, "-") == 0 || strcmp(linebuffer, "+") == 0 || strcmp(linebuffer, "*") == 0) return;
-  else if (linebuffer[-1] == '.') return;
+void parseLine()
+{
 
-  text = line;  // text is a whole line
+  char* tag = "p";
+
+  char* headingb[] = {"#", "##", "###", "####", "#####", "######"};
+  char* headingt[] = {"h1", "h2", "h3", "h4", "h5", "h6"};
+
+  for (int i = 0; i < 6; i++)
+  {
+    if (strcmp(linebuffer, headingb[i]) == 0)
+    {
+      printf("<%s>", headingt[i]);
+      parseText(text, lineEnd);
+      printf("</%s>\n", headingt[i]);
+      return;
+    }
+  }
+
+  if (strcmp(linebuffer, "---") == 0 || strcmp(linebuffer, "___") == 0 || strcmp(linebuffer, "***") == 0)
+  {
+    printf("<hr>\n");
+    return;
+  }
+
+
+  if (strcmp(linebuffer, "```") == 0)
+  {
+    printf("<code>\n");
+    while (hasMoreLines())
+    {
+      readLine();
+      splitLine();
+      if (strcmp(linebuffer, "```") == 0)
+      {
+        printf("</code>\n");
+        return;
+      }
+      printf("%s\n", line);
+    }
+  }
+  else if (linebuffer[0] == '-' || linebuffer[0] == '+' || linebuffer[0] == '*' )
+  {
+    printf("<ul>\n<li>");
+    parseText(text, lineEnd);
+    while (hasMoreLines())
+    {
+      readLine();
+      splitLine();
+      if (line[0] == '\0')
+      {
+        printf("</li>\n</ul>\n");
+        return;
+      }
+      else if (linebuffer[0] == '-' || linebuffer[0] == '+' || linebuffer[0] == '*' )
+        printf("</li>\n<li>");
+      parseText(text, lineEnd);
+    }
+  }
+
+  printf("<p>");
+  parseText(line, lineEnd);
+  printf("</p>\n");
+
 }
 
 void parseText(char* current, char* end)
@@ -186,7 +240,7 @@ char* tagSearchImg(char* current, char* end)
   else
   {
     *blank = '\0';
-    printf("<img src=\"%s\" alt=\"%s\" title=%s\>", p1 + 2, current + 2, blank + 1);
+    printf("<img src=\"%s\" alt=\"%s\" title=%s>", p1 + 2, current + 2, blank + 1);
   }
 
   return p2 + 1;
