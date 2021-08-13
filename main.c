@@ -8,8 +8,8 @@
 
 #include <queue.h>
 
-typedef enum {ul, ol, li} tag_t;
-static char* tag_n[] = {"ul", "ol", "li"};
+typedef enum {ul, ol, li, blockquote, p} tag_t;
+static char* tag_n[] = {"ul", "ol", "li", "blockquote", "p"};
 
 queue_t lineQueue;
 void line_push(tag_t tag, bool parse);
@@ -35,6 +35,8 @@ void parseLine();
 void parseText(char* start, char* end);
 
 int startList(tag_t list_tag, char currentSign, int currentIndent);
+int startBlockquote(int currentIndent);
+int getBlockquoteLen();
 
 char* searchOne(char c, char* start, char* end);
 char* searchTwo(char c1, char c2, char* start, char* end);
@@ -194,10 +196,71 @@ void parseLine()
       line_pop();
     return;
   }
+  else if (*linebuffer == '>')
+  {
+    startBlockquote(getBlockquoteLen());
+    while (!queue_empty(&lineQueue))
+      line_pop();
+    return;
+  }
 
   printf("<p>");
   parseText(line, lineEnd);
   printf("</p>\n");
+}
+
+int startBlockquote(int currentIndent)
+{
+  line_push(blockquote, false);
+  line_push(p, true);
+  while (hasMoreLines())
+  {
+    readLine();
+    splitLine();
+    indent = getBlockquoteLen();
+    if (*linebuffer == '>')
+    {
+      // New list item is reached, end the previous one
+      line_pop();
+
+      if (currentIndent < indent)
+      {
+        // We are too low. Start new Ul with a bigger indent
+        int blankLine = startBlockquote(indent);
+        if (blankLine ) return 1; // blank line must end all Uls, propagate throught recursion
+      }
+
+      if (currentIndent > indent)
+      {
+        // We need to return one step downwards
+        // Close the current LI
+        line_pop();
+
+        // Curent line will be handled by the lower levels
+        return 0;
+      }
+
+      // We are at the good indent level
+      // Start a new list item
+      line_push(p, true);
+    }
+    else if (line[0] == '\0') return 1;              // blank line must end all blockquotes
+    else parseText(line, lineEnd);  // Current LI spans multiple lines. Just print the text of subsiquent lines
+  }
+  return 0;
+}
+
+int getBlockquoteLen()
+{
+  char* p = linebuffer;
+  while (true)
+  {
+    if (*p == ' ') continue;
+    if (*p != '>') break;
+    p++;
+  }
+
+  return p - linebuffer;
 }
 
 void line_push(tag_t tag, bool parse)
