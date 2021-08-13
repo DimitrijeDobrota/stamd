@@ -1,9 +1,19 @@
+#include <ctype.h>
 #include <err.h>
 #include <limits.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+
+#include <queue.h>
+
+typedef enum {ul, li} tag_t;
+char* tag_n[] = {"ul", "li"};
+
+queue_t lineQueue;
+void line_push(tag_t tag, bool parse);
+void line_pop();
 
 static const char *articledir;
 static const char *outdir;
@@ -14,12 +24,17 @@ char line[1000] = "\0";
 char linebuffer[100] = "\0";
 char* text;
 char* lineEnd;
+char* lineEnd;
+char* bufferEnd;
+int indent;
 
 bool hasMoreLines();
 void readLine();
 void splitLine();
 void parseLine();
 void parseText(char* start, char* end);
+
+int startUl(int currentIndent);
 
 char* searchOne(char c, char* start, char* end);
 char* searchTwo(char c1, char c2, char* start, char* end);
@@ -38,6 +53,8 @@ int main(int argc, char* argv[])
 {
   char  articledirabs[PATH_MAX + 1], outdirabs[PATH_MAX + 1], mdfile[PATH_MAX + 1], htmlfile[PATH_MAX + 1];
   int i;
+
+  queue_ctor(&lineQueue);
 
 
   for (i = 1; i < argc; i++)
@@ -84,6 +101,7 @@ int main(int argc, char* argv[])
     parseLine();
   }
 
+  queue_dtor(&lineQueue);
   return 0;
 }
 
@@ -115,9 +133,16 @@ void splitLine()
   char *p = line;
   char *b = linebuffer;   // save potential line tag
 
-  while (*p != ' ' && *p != '\0')
+  while (isspace(*p) && *p != '\0')
+    p++;
+
+  indent = p - line + 1;
+
+  /* while (*p != ' ' && *p != '\0') */
+  while (!isspace(*p) && *p != '\0')
     *b++ = *p++;
   *b = '\0';
+  bufferEnd = b - 1;
   text = ++p;
 }
 
@@ -140,7 +165,7 @@ void parseLine()
     }
   }
 
-  if (strcmp(linebuffer, "---") == 0 || strcmp(linebuffer, "___") == 0 || strcmp(linebuffer, "***") == 0)
+  if (strcmp("---", linebuffer) == 0 || strcmp("___", linebuffer) == 0 || strcmp("***", linebuffer) == 0)
   {
     printf("<hr>\n");
     return;
@@ -162,29 +187,80 @@ void parseLine()
       printf("%s\n", line);
     }
   }
-  else if (linebuffer[0] == '-' || linebuffer[0] == '+' || linebuffer[0] == '*' )
+  else if (*bufferEnd == '-' || *bufferEnd == '+' || *bufferEnd == '*')
   {
-    printf("<ul>\n<li>");
-    parseText(text, lineEnd);
-    while (hasMoreLines())
-    {
-      readLine();
-      splitLine();
-      if (line[0] == '\0')
-      {
-        printf("</li>\n</ul>\n");
-        return;
-      }
-      else if (linebuffer[0] == '-' || linebuffer[0] == '+' || linebuffer[0] == '*' )
-        printf("</li>\n<li>");
-      parseText(text, lineEnd);
-    }
+    startUl(indent);
+    while (!queue_empty(&lineQueue))
+      line_pop();
+    return;
   }
 
   printf("<p>");
   parseText(line, lineEnd);
   printf("</p>\n");
+}
 
+void line_push(tag_t tag, bool parse)
+{
+  if (parse)
+  {
+    printf("<%s>", tag_n[tag]);
+    parseText(text, lineEnd);
+  }
+  else
+  {
+    printf("<%s>\n", tag_n[tag]);
+  }
+  queue_push(&lineQueue, tag);
+}
+
+void line_pop()
+{
+  tag_t tag = queue_top(&lineQueue);
+  queue_pop(&lineQueue);
+  printf("</%s>\n", tag_n[tag]);
+}
+
+// Function to start new level of indend with UL
+// If blank line is reached 1 is returned, to end the recursion
+int startUl(int currentIndent)
+{
+  line_push(ul, false);
+  line_push(li, true);
+  while (hasMoreLines())
+  {
+    readLine();
+    splitLine();
+    if (*bufferEnd == '-' || *bufferEnd == '+' || *bufferEnd == '*')
+    {
+      // New list item is reached, end the previous one
+      line_pop();
+
+      if (currentIndent < indent)
+      {
+        // We are too low. Start new Ul with a bigger indent
+        int blankLine = startUl(indent);
+        if (blankLine ) return 1; // blank line must end all Uls, propagate throught recursion
+      }
+
+      if (currentIndent > indent)
+      {
+        // We need to return one step downwards
+        // Close the current LI
+        line_pop();
+
+        // Curent line will be handled by the lower levels
+        return 0;
+      }
+
+      // We are at the good indent level
+      // Start a new list item
+      line_push(li, true);
+    }
+    else if (line[0] == '\0') return 1;              // blank line must end all Uls
+    else parseText(line + currentIndent, lineEnd);   // Current LI spans multiple lines. Just print the text of subsiquent lines
+  }
+  return 0;
 }
 
 void parseText(char* current, char* end)
