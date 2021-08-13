@@ -8,8 +8,8 @@
 
 #include <queue.h>
 
-typedef enum {ul, li} tag_t;
-char* tag_n[] = {"ul", "li"};
+typedef enum {ul, ol, li} tag_t;
+static char* tag_n[] = {"ul", "ol", "li"};
 
 queue_t lineQueue;
 void line_push(tag_t tag, bool parse);
@@ -34,7 +34,7 @@ void splitLine();
 void parseLine();
 void parseText(char* start, char* end);
 
-int startUl(int currentIndent);
+int startList(tag_t list_tag, int currentIndent);
 
 char* searchOne(char c, char* start, char* end);
 char* searchTwo(char c1, char c2, char* start, char* end);
@@ -187,9 +187,9 @@ void parseLine()
       printf("%s\n", line);
     }
   }
-  else if (*bufferEnd == '-' || *bufferEnd == '+' || *bufferEnd == '*')
+  else if (*bufferEnd == '-' || *bufferEnd == '+' || *bufferEnd == '*' || *bufferEnd == '.')
   {
-    startUl(indent);
+    *bufferEnd == '.' ? startList(ol, indent) : startList(ul, indent);
     while (!queue_empty(&lineQueue))
       line_pop();
     return;
@@ -223,23 +223,25 @@ void line_pop()
 
 // Function to start new level of indend with UL
 // If blank line is reached 1 is returned, to end the recursion
-int startUl(int currentIndent)
+int startList(tag_t currentTag, int currentIndent)
 {
-  line_push(ul, false);
+  line_push(currentTag, false);
   line_push(li, true);
   while (hasMoreLines())
   {
     readLine();
     splitLine();
-    if (*bufferEnd == '-' || *bufferEnd == '+' || *bufferEnd == '*')
+    tag_t listTag = ul;
+    if (*bufferEnd == '-' || *bufferEnd == '+' || *bufferEnd == '*' || *bufferEnd == '.')
     {
+      if (*bufferEnd == '.') listTag = ol;
       // New list item is reached, end the previous one
       line_pop();
 
       if (currentIndent < indent)
       {
         // We are too low. Start new Ul with a bigger indent
-        int blankLine = startUl(indent);
+        int blankLine = startList(listTag, indent);
         if (blankLine ) return 1; // blank line must end all Uls, propagate throught recursion
       }
 
@@ -251,6 +253,13 @@ int startUl(int currentIndent)
 
         // Curent line will be handled by the lower levels
         return 0;
+      }
+
+      // Allow the same inded level to have a different type of a list
+      if (currentTag != listTag){
+        line_pop();
+        line_push(listTag, false);
+        currentTag=listTag;
       }
 
       // We are at the good indent level
