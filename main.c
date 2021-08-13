@@ -34,7 +34,7 @@ void splitLine();
 void parseLine();
 void parseText(char* start, char* end);
 
-int startList(tag_t list_tag, int currentIndent);
+int startList(tag_t list_tag, char currentSign, int currentIndent);
 
 char* searchOne(char c, char* start, char* end);
 char* searchTwo(char c1, char c2, char* start, char* end);
@@ -149,7 +149,7 @@ void splitLine()
 void parseLine()
 {
 
-  char* tag = "p";
+  if (*linebuffer == '\0') return;
 
   char* headingb[] = {"#", "##", "###", "####", "#####", "######"};
   char* headingt[] = {"h1", "h2", "h3", "h4", "h5", "h6"};
@@ -187,9 +187,9 @@ void parseLine()
       printf("%s\n", line);
     }
   }
-  else if (*bufferEnd == '-' || *bufferEnd == '+' || *bufferEnd == '*' || *bufferEnd == '.')
+  else if (*bufferEnd == '-' || *bufferEnd == '+' || *bufferEnd == '*' || *bufferEnd == '.' && isdigit(*(bufferEnd - 1)))
   {
-    *bufferEnd == '.' ? startList(ol, indent) : startList(ul, indent);
+    *bufferEnd == '.' ? startList(ol, *bufferEnd, indent) : startList(ul, *bufferEnd, indent);
     while (!queue_empty(&lineQueue))
       line_pop();
     return;
@@ -223,7 +223,9 @@ void line_pop()
 
 // Function to start new level of indend with UL
 // If blank line is reached 1 is returned, to end the recursion
-int startList(tag_t currentTag, int currentIndent)
+tag_t list_tag;
+char list_sign;
+int startList(tag_t currentTag, char currentSign, int currentIndent)
 {
   line_push(currentTag, false);
   line_push(li, true);
@@ -231,18 +233,25 @@ int startList(tag_t currentTag, int currentIndent)
   {
     readLine();
     splitLine();
-    tag_t listTag = ul;
-    if (*bufferEnd == '-' || *bufferEnd == '+' || *bufferEnd == '*' || *bufferEnd == '.')
+    list_tag = ul;
+    list_sign = *bufferEnd;
+    if (list_sign == '-' || list_sign == '+' || list_sign == '*' || list_sign == '.' && isdigit(*(bufferEnd - 1)))
     {
-      if (*bufferEnd == '.') listTag = ol;
-      // New list item is reached, end the previous one
-      line_pop();
+      if (list_sign == '.') list_tag = ol;
 
       if (currentIndent < indent)
       {
-        // We are too low. Start new Ul with a bigger indent
-        int blankLine = startList(listTag, indent);
+        // We are too low. Start new list with a bigger indent
+        // This new list is part of the previous list item, that will get closed after
+        printf("\n");
+        int blankLine = startList(list_tag, list_sign, indent);
+        line_pop();
         if (blankLine ) return 1; // blank line must end all Uls, propagate throught recursion
+      }
+      else
+      {
+        // Since there is no new level of indentation close the LI
+        line_pop();
       }
 
       if (currentIndent > indent)
@@ -256,10 +265,18 @@ int startList(tag_t currentTag, int currentIndent)
       }
 
       // Allow the same inded level to have a different type of a list
-      if (currentTag != listTag){
+      if (currentTag != list_tag)
+      {
         line_pop();
-        line_push(listTag, false);
-        currentTag=listTag;
+        line_push(list_tag, false);
+        currentTag = list_tag;
+      }
+      // Switch in the sign means new list
+      else if (currentSign != list_sign)
+      {
+        line_pop();
+        line_push(list_tag, false);
+        currentSign = list_sign;
       }
 
       // We are at the good indent level
@@ -291,7 +308,7 @@ void parseText(char* current, char* end)
       else if (*current == '\"')
         current = tagSearchOne(current, end, "&quot;", "&quot;");
       else if (*current == '`')
-        current = tagSearchOne(current, end, "<code>", "<code>");
+        current = tagSearchOne(current, end, "<code>", "</code>");
       else if (*current == '[')
         current = tagSearchLink(current, end);
       else if (*current == '!')
