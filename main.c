@@ -155,8 +155,8 @@ void parseLine()
 
   if (*linebuffer == '\0') return;
 
-  char* headingb[] = {"#", "##", "###", "####", "#####", "######"};
-  char* headingt[] = {"h1", "h2", "h3", "h4", "h5", "h6"};
+  static const char* headingb[] = {"#", "##", "###", "####", "#####", "######"};
+  static const char* headingt[] = {"h1", "h2", "h3", "h4", "h5", "h6"};
 
   for (int i = 0; i < 6; i++)
   {
@@ -169,41 +169,16 @@ void parseLine()
     }
   }
 
-  if (strcmp("---", linebuffer) == 0 || strcmp("___", linebuffer) == 0 || strcmp("***", linebuffer) == 0)
-  {
-    printf("<hr>\n");
-    return;
-  }
+  if (strcmp("---", linebuffer) == 0 || strcmp("___", linebuffer) == 0 || strcmp("***", linebuffer) == 0) printf("<hr>\n");
+  else if (strcmp(linebuffer, "```") == 0) startCodeBlock();
+  else if (*bufferEnd == '-' || *bufferEnd == '+' || *bufferEnd == '*') startList(ul, *bufferEnd, indent);
+  else if (*bufferEnd == '.' && isdigit(*(bufferEnd - 1))) startList(ol, *bufferEnd, indent);
+  else if (*linebuffer == '>') startBlockquote(getBlockquoteLen());
+  else if (indent >= 4) startCodeIndent(indent);
+  else startParagraph();
 
-
-  if (strcmp(linebuffer, "```") == 0)
-  {
-    startCodeBlock();
-    return;
-  }
-  else if (*bufferEnd == '-' || *bufferEnd == '+' || *bufferEnd == '*' || *bufferEnd == '.' && isdigit(*(bufferEnd - 1)))
-  {
-    *bufferEnd == '.' ? startList(ol, *bufferEnd, indent) : startList(ul, *bufferEnd, indent);
-    while (!queue_empty(&lineQueue))
-      line_pop();
-    return;
-  }
-  else if (*linebuffer == '>')
-  {
-    startBlockquote(getBlockquoteLen());
-    while (!queue_empty(&lineQueue))
-      line_pop();
-    return;
-  }
-  else if (indent >= 4)
-  {
-    startCodeIndent(indent);
-    return;
-  }
-  else
-  {
-    startParagraph();
-  }
+  while (!queue_empty(&lineQueue))
+    line_pop();
 
 }
 
@@ -439,28 +414,35 @@ char* tagSearch(bool image, char* current, char* end)
   char* p2 = searchOne(')', p1 + 2, end);
   if (p2 == end) return current;
 
-  *p1 = '\0';
-  *p2 = '\0';
+  *p1 = '\0';   // start->p1 = text
+  *p2 = '\0';   // p1->p2 = link
 
-  char* blank = strchr(p1 + 2, ' ');
+  p1 += 2; // step over "]("
+  start += 1; // step over "["
 
-  if (blank == NULL)
+
+  char* blank = strchr(p1 + 2, ' '); // Detect title
+
+  if (blank == NULL || blank > p2)
   {
+    // there is no title attribute
     if (image)
-      printf("<img src=\"%s\" alt=\"%s\">", p1 + 2, start + 1);
+      printf("<img src=\"%s\" alt=\"%s\">", p1, start);
     else
-      printf("<a href=\"%s\">%s</a>", p1 + 2, start + 1);
+      printf("<a href=\"%s\">%s</a>", p1, start);
   }
   else
   {
-    *blank = '\0';
+    // there is a title attribute
+    *blank = '\0';  // p2->blank = title
+    blank += 1; // get to the quoted part
     if (image)
-      printf("<img src=\"%s\" alt=\"%s\" title=%s>", p1 + 2, start + 1, blank + 1);
+      printf("<img src=\"%s\" alt=\"%s\" title=%s>", p1, start, blank);
     else
-      printf("<a href=\"%s\" title=%s>%s</a>", p1 + 2, blank + 1, start + 1);
+      printf("<a href=\"%s\" title=%s>%s</a>", p1, blank, start);
   }
 
-  return p2 + 1;
+  return p2 + 1;  // continue to parse text just after ")"
 }
 
 char* tagSearchOne(char* current, char* end, char* open, char* close)
