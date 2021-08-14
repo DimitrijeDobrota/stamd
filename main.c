@@ -33,17 +33,19 @@ void readLine();
 void splitLine();
 void parseLine();
 void parseText(char* start, char* end);
+void startParagraph();
 
 int startList(tag_t list_tag, char currentSign, int currentIndent);
 int startBlockquote(int currentIndent);
 int getBlockquoteLen();
+void startCodeBlock();
+void startCodeIndent(int currentIndent);
 
 char* searchOne(char c, char* start, char* end);
 char* searchTwo(char c1, char c2, char* start, char* end);
 char* tagSearchOne(char* current, char* end, char* open, char* close);
 char* tagSearchTwo(char* current, char* end, char* open, char* close);
-char* tagSearchLink(char* current, char* end);
-char* tagSearchImg(char* current, char* end);
+char* tagSearch(bool image, char* current, char* end);
 
 void usage(char *argv0)
 {
@@ -138,7 +140,7 @@ void splitLine()
   while (isspace(*p) && *p != '\0')
     p++;
 
-  indent = p - line + 1;
+  indent = p - line;
 
   /* while (*p != ' ' && *p != '\0') */
   while (!isspace(*p) && *p != '\0')
@@ -176,18 +178,8 @@ void parseLine()
 
   if (strcmp(linebuffer, "```") == 0)
   {
-    printf("<code>\n");
-    while (hasMoreLines())
-    {
-      readLine();
-      splitLine();
-      if (strcmp(linebuffer, "```") == 0)
-      {
-        printf("</code>\n");
-        return;
-      }
-      printf("%s\n", line);
-    }
+    startCodeBlock();
+    return;
   }
   else if (*bufferEnd == '-' || *bufferEnd == '+' || *bufferEnd == '*' || *bufferEnd == '.' && isdigit(*(bufferEnd - 1)))
   {
@@ -203,10 +195,70 @@ void parseLine()
       line_pop();
     return;
   }
+  else if (indent >= 4)
+  {
+    startCodeIndent(indent);
+    return;
+  }
+  else
+  {
+    startParagraph();
+  }
 
+}
+
+void startParagraph()
+{
   printf("<p>");
   parseText(line, lineEnd);
-  printf("</p>\n");
+  while (hasMoreLines())
+  {
+    readLine();
+    splitLine();
+    if (*linebuffer == '\0')
+    {
+      printf("</p>\n");
+      return;
+    }
+    printf("\n");
+    parseText(line, lineEnd);
+  }
+
+}
+
+void startCodeIndent(int currentIndent)
+{
+  printf("<pre><code>\n%s\n", line + currentIndent);
+  while (hasMoreLines())
+  {
+    readLine();
+    splitLine();
+    if (*linebuffer == '\0')
+    {
+      printf("</code></pre>\n");
+      return;
+    }
+    printf("%s\n", line + currentIndent);
+  }
+}
+
+void startCodeBlock()
+{
+  if (lineEnd - line < 4)
+    printf("<pre><code>\n");
+  else
+    printf("<pre class=\"hl%s\"><code>\n", text);
+  while (hasMoreLines())
+  {
+    readLine();
+    splitLine();
+    if (strcmp(linebuffer, "```") == 0)
+    {
+      printf("</code></pre>\n");
+      return;
+    }
+    printf("%s\n", line);
+  }
 }
 
 int startBlockquote(int currentIndent)
@@ -220,32 +272,24 @@ int startBlockquote(int currentIndent)
     indent = getBlockquoteLen();
     if (*linebuffer == '>')
     {
-      // New list item is reached, end the previous one
       line_pop();
 
       if (currentIndent < indent)
       {
-        // We are too low. Start new Ul with a bigger indent
         int blankLine = startBlockquote(indent);
-        if (blankLine ) return 1; // blank line must end all Uls, propagate throught recursion
+        if (blankLine ) return 1;
       }
 
       if (currentIndent > indent)
       {
-        // We need to return one step downwards
-        // Close the current LI
         line_pop();
-
-        // Curent line will be handled by the lower levels
         return 0;
       }
 
-      // We are at the good indent level
-      // Start a new list item
       line_push(p, true);
     }
-    else if (line[0] == '\0') return 1;              // blank line must end all blockquotes
-    else parseText(line, lineEnd);  // Current LI spans multiple lines. Just print the text of subsiquent lines
+    else if (line[0] == '\0') return 1;
+    else parseText(line, lineEnd);
   }
   return 0;
 }
@@ -347,7 +391,7 @@ int startList(tag_t currentTag, char currentSign, int currentIndent)
       line_push(li, true);
     }
     else if (line[0] == '\0') return 1;              // blank line must end all Uls
-    else parseText(line + currentIndent, lineEnd);   // Current LI spans multiple lines. Just print the text of subsiquent lines
+    else parseText(line + currentIndent + 1, lineEnd);   // Current LI spans multiple lines. Just print the text of subsiquent lines
   }
   return 0;
 }
@@ -373,9 +417,9 @@ void parseText(char* current, char* end)
       else if (*current == '`')
         current = tagSearchOne(current, end, "<code>", "</code>");
       else if (*current == '[')
-        current = tagSearchLink(current, end);
+        current = tagSearch(false, current, end);
       else if (*current == '!')
-        current = tagSearchImg(current, end);
+        current = tagSearch(true, current, end);
     }
     if (control != current) continue;   // if there has been change skip already parsed text
     printf("%c", *current);
@@ -383,11 +427,13 @@ void parseText(char* current, char* end)
   }
 }
 
-char* tagSearchImg(char* current, char* end)
+char* tagSearch(bool image, char* current, char* end)
 {
-  if (*(current + 1) != '[') return current;
+  char* start = current;
+  if (image) start++;
+  if (*start != '[') return current;
 
-  char* p1 = searchTwo(']', '(', current, end);
+  char* p1 = searchTwo(']', '(', start, end);
   if (p1 == end) return current;
 
   char* p2 = searchOne(')', p1 + 2, end);
@@ -400,29 +446,20 @@ char* tagSearchImg(char* current, char* end)
 
   if (blank == NULL)
   {
-    printf("<img src=\"%s\" alt=\"%s\">", p1 + 2, current + 2);
+    if (image)
+      printf("<img src=\"%s\" alt=\"%s\">", p1 + 2, start + 1);
+    else
+      printf("<a href=\"%s\">%s</a>", p1 + 2, start + 1);
   }
   else
   {
     *blank = '\0';
-    printf("<img src=\"%s\" alt=\"%s\" title=%s>", p1 + 2, current + 2, blank + 1);
+    if (image)
+      printf("<img src=\"%s\" alt=\"%s\" title=%s>", p1 + 2, start + 1, blank + 1);
+    else
+      printf("<a href=\"%s\" title=%s>%s</a>", p1 + 2, blank + 1, start + 1);
   }
 
-  return p2 + 1;
-}
-
-char* tagSearchLink(char* current, char* end)
-{
-  char* p1 = searchTwo(']', '(', current, end);
-  if (p1 == end) return current;
-
-  char* p2 = searchOne(')', p1, end);
-  if (p2 == end) return current;
-
-  *p1 = '\0';
-  *p2 = '\0';
-
-  printf("<a href=\"%s\">%s</a>", p1 + 2, current + 1);
   return p2 + 1;
 }
 
