@@ -7,52 +7,52 @@
 
 char* searchOne(char c, char* start, char* end);
 char* searchTwo(char c1, char c2, char* start, char* end);
-char* tagSearchOne(char* current, char* end, char* open, char* close);
-char* tagSearchTwo(char* current, char* end, char* open, char* close);
-char* tagSearch(bool image, char* current, char* end);
 
+void tagSearchOne(char* current, char* end, char* open, char* close);
+void tagSearchTwo(char* current, char* end, char* open, char* close);
+void tagSearch(bool image, char* current, char* end);
+
+
+char* control; // before returning from any tagSearch control needs to be set if the search was successfull
 void parseText(char* current, char* end)
 {
   while  (current < end)
   {
-    char* control = current;   // if current == control after the search nothing has been found
+    control=current;
     if (*current == *(current + 1))    // handle tags that require double prefix
     {
-      if (*current == '*' || *current == '_')
-        current = tagSearchTwo(current, end, "<strong>", "</strong>");
-      else if (*current == '~')
-        current = tagSearchTwo(current, end, "<s>", "</s>");
+      if (*current == '*' || *current == '_') tagSearchTwo(current, end, "<strong>", "</strong>");
+      else if (*current == '~') tagSearchTwo(current, end, "<s>", "</s>");
     }
     else     // handle tags that require a single prefix
     {
-      if (*current == '*' || *current == '_')
-        current = tagSearchOne(current, end, "<em>", "</em>");
-      else if (*current == '\"')
-        current = tagSearchOne(current, end, "&quot;", "&quot;");
-      else if (*current == '`')
-        current = tagSearchOne(current, end, "<code>", "</code>");
-      else if (*current == '[')
-        current = tagSearch(false, current, end);
-      else if (*current == '!')
-        current = tagSearch(true, current, end);
+      if (*current == '*' || *current == '_') tagSearchOne(current, end, "<em>", "</em>");
+      else if (*current == '\"') tagSearchOne(current, end, "&quot;", "&quot;");
+      else if (*current == '`') tagSearchOne(current, end, "<code>", "</code>");
+      else if (*current == '[') tagSearch(false, current, end);
+      else if (*current == '!') tagSearch(true, current, end);
     }
-    if (control != current) continue;   // if there has been change skip already parsed text
+    if (control != current)    // if there has been change skip already parsed text
+    {
+      current = control;
+      continue;
+    }
     printf("%c", *current);
     current++;
   }
 }
 
-char* tagSearch(bool image, char* current, char* end)
+void tagSearch(bool image, char* current, char* end)
 {
   char* start = current;
   if (image) start++;
-  if (*start != '[') return current;
+  if (*start != '[') return;
 
   char* p1 = searchTwo(']', '(', start, end);
-  if (p1 == end) return current;
+  if (p1 == end) return;
 
   char* p2 = searchOne(')', p1 + 2, end);
-  if (p2 == end) return current;
+  if (p2 == end) return;
 
   *p1 = '\0';   // start->p1 = text
   *p2 = '\0';   // p1->p2 = link
@@ -82,29 +82,29 @@ char* tagSearch(bool image, char* current, char* end)
       printf("<a href=\"%s\" title=%s>%s</a>", p1, blank, start);
   }
 
-  return p2 + 1;  // continue to parse text just after ")"
+  control = p2 + 1;  // continue to parse text just after ")"
 }
 
-char* tagSearchOne(char* current, char* end, char* open, char* close)
+void tagSearchOne(char* current, char* end, char* open, char* close)
 {
   char* start = current + 1;
   char* p = searchOne(* current, start, end);
-  if (p == end) return current;
+  if (p == end) return;
   printf("%s", open);
   parseText(current + 1, p);
   printf("%s", close);
-  return p + 1;
+  control = p + 1;
 }
 
-char* tagSearchTwo(char* current, char* end, char* open, char* close)
+void tagSearchTwo(char* current, char* end, char* open, char* close)
 {
   char* start = current + 2;
   char* p = searchTwo(*current, *current, start, end);
-  if (p == end) return current;
+  if (p == end) return;
   printf("%s", open);
   parseText(start, p);
   printf("%s", close);
-  return p + 2;
+  control = p + 2;
 }
 
 
