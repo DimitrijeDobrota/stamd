@@ -124,17 +124,13 @@ void parseLine()
 
 void startParagraph()
 {
-  printf("<p>");
-  parseText(line, lineEnd);
+  text = line;
+  line_push(p, true);
   while (hasMoreLines())
   {
     readLine();
     splitLine();
-    if (*linebuffer == '\0')
-    {
-      printf("</p>\n");
-      return;
-    }
+    if (*linebuffer == '\0') return;
     printf("\n");
     parseText(line, lineEnd);
   }
@@ -143,36 +139,27 @@ void startParagraph()
 
 void startCodeIndent(int currentIndent)
 {
-  printf("<pre><code>\n%s\n", line + currentIndent);
+  line_push(pre, false);
+  line_push(code, false);
   while (hasMoreLines())
   {
+    printf("%s\n", line + currentIndent); // Nullify the indend when code block is started
     readLine();
     splitLine();
-    if (*linebuffer == '\0')
-    {
-      printf("</code></pre>\n");
-      return;
-    }
-    printf("%s\n", line + currentIndent);
+    if (*linebuffer == '\0') return;
   }
 }
 
 void startCodeBlock()
 {
-  if (lineEnd - line < 4)
-    printf("<pre><code>\n");
-  else
-    printf("<pre class=\"hl%s\"><code>\n", text);
+  line_push(pre, false);
+  line_push(code, false);
   while (hasMoreLines())
   {
     readLine();
     splitLine();
-    if (strcmp(linebuffer, "```") == 0)
-    {
-      printf("</code></pre>\n");
-      return;
-    }
-    printf("%s\n", line);
+    if (strcmp(linebuffer, "```") == 0) return;
+    printf("%s\n", line);   // print the whole line
   }
 }
 
@@ -289,4 +276,3 @@ int startList(tag_t currentTag, char currentSign, int currentIndent)
   }
   return 0;
 }
-
