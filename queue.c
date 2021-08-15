@@ -6,7 +6,7 @@ void queue_ctor(queue_t* queue)
 }
 void queue_dtor(queue_t* queue)
 {
-  ;
+  queue->top = queue->storage;
 }
 
 int queue_top(queue_t* queue)
@@ -21,7 +21,7 @@ int queue_push(queue_t* queue, int item)
 
 int queue_pop(queue_t* queue)
 {
-  if(!queue_empty(queue))
+  if (!queue_empty(queue))
     queue->top--;
 }
 
