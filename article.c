@@ -13,6 +13,7 @@ extern queue_t lineQueue;
 enum tag_t;
 
 extern FILE* md;
+extern FILE* html;
 
 extern char* text;
 extern char* lineEnd;
@@ -51,14 +52,14 @@ void parseArticleLine()
   {
     if (strcmp(linebuffer, headingb[i]) == 0)
     {
-      printf("</section>\n<section>\n<%s>", headingt[i]);
+      fprintf(html, "</section>\n<section>\n<%s>", headingt[i]);
       parseText(text, lineEnd);
-      printf("</%s>\n", headingt[i]);
+      fprintf(html, "</%s>\n", headingt[i]);
       return;
     }
   }
 
-  if (strcmp("---", linebuffer) == 0 || strcmp("___", linebuffer) == 0 || strcmp("***", linebuffer) == 0) printf("<hr>\n");
+  if (strcmp("---", linebuffer) == 0 || strcmp("___", linebuffer) == 0 || strcmp("***", linebuffer) == 0) fprintf(html, "<hr>\n");
   else if (strcmp(linebuffer, "```") == 0) startCodeBlock();
   else if (*bufferEnd == '-' || *bufferEnd == '+' || *bufferEnd == '*') startList(ul, *bufferEnd, indent);
   else if (*bufferEnd == '.' && isdigit(*(bufferEnd - 1))) startList(ol, *bufferEnd, indent);
@@ -80,7 +81,7 @@ void startParagraph()
     readLine(md);
     splitLine();
     if (*linebuffer == '\0') return;
-    printf("\n");
+    fprintf(html, "\n");
     parseText(line, lineEnd);
   }
 
@@ -92,7 +93,7 @@ void startCodeIndent(int currentIndent)
   line_push(code, false);
   while (hasMoreLines(md))
   {
-    printf("%s\n", line + currentIndent); // Nullify the indend when code block is started
+    fprintf(html, "%s\n", line + currentIndent); // Nullify the indend when code block is started
     readLine(md);
     splitLine();
     if (*linebuffer == '\0') return;
@@ -108,7 +109,7 @@ void startCodeBlock()
     readLine(md);
     splitLine();
     if (strcmp(linebuffer, "```") == 0) return;
-    printf("%s\n", line);   // print the whole line
+    fprintf(html, "%s\n", line);   // print the whole line
   }
 }
 
@@ -180,7 +181,7 @@ int startList(tag_t currentTag, char currentSign, int currentIndent)
       {
         // We are too low. Start new list with a bigger indent
         // This new list is part of the previous list item, that will get closed after
-        printf("\n");
+        fprintf(html, "\n");
         int blankLine = startList(list_tag, list_sign, indent);
         line_pop();
         if (blankLine ) return 1; // blank line must end all Uls, propagate throught recursion

@@ -5,6 +5,8 @@
 
 #include "text.h"
 
+extern FILE* html;
+
 char* searchOne(char c, char* start, char* end);
 char* searchTwo(char c1, char c2, char* start, char* end);
 
@@ -37,7 +39,7 @@ void parseText(char* current, char* end)
       current = control;
       continue;
     }
-    printf("%c", *current);
+    fprintf(html, "%c", *current);
     current++;
   }
 }
@@ -67,9 +69,9 @@ void tagSearch(bool image, char* current, char* end)
   {
     // there is no title attribute
     if (image)
-      printf("<img src=\"%s\" alt=\"%s\">", p1, start);
+      fprintf(html, "<img src=\"%s\" alt=\"%s\">", p1, start);
     else
-      printf("<a href=\"%s\">%s</a>", p1, start);
+      fprintf(html, "<a href=\"%s\">%s</a>", p1, start);
   }
   else
   {
@@ -77,9 +79,9 @@ void tagSearch(bool image, char* current, char* end)
     *blank = '\0';  // p2->blank = title
     blank += 1; // get to the quoted part
     if (image)
-      printf("<img src=\"%s\" alt=\"%s\" title=%s>", p1, start, blank);
+      fprintf(html, "<img src=\"%s\" alt=\"%s\" title=%s>", p1, start, blank);
     else
-      printf("<a href=\"%s\" title=%s>%s</a>", p1, blank, start);
+      fprintf(html, "<a href=\"%s\" title=%s>%s</a>", p1, blank, start);
   }
 
   control = p2 + 1;  // continue to parse text just after ")"
@@ -90,9 +92,9 @@ void tagSearchOne(char* current, char* end, char* open, char* close)
   char* start = current + 1;
   char* p = searchOne(* current, start, end);
   if (p == end) return;
-  printf("%s", open);
+  fprintf(html, "%s", open);
   parseText(current + 1, p);
-  printf("%s", close);
+  fprintf(html, "%s", close);
   control = p + 1;
 }
 
@@ -101,9 +103,9 @@ void tagSearchTwo(char* current, char* end, char* open, char* close)
   char* start = current + 2;
   char* p = searchTwo(*current, *current, start, end);
   if (p == end) return;
-  printf("%s", open);
+  fprintf(html, "%s", open);
   parseText(start, p);
-  printf("%s", close);
+  fprintf(html, "%s", close);
   control = p + 2;
 }
 
