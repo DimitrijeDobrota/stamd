@@ -23,7 +23,12 @@ void parseConfigLine(void)
   else if (strcmp(linebuffer, "Date:") == 0) strcpy(date, text);
 }
 
-void  writeHeader()
+void writeArticleItem(char* name)
+{
+  fprintf(html, "<li><a href=\"./%s.html\">%s - %s</a></li>\n", name, date, title);
+}
+
+void  writeHeader(void)
 {
   fprintf(html, "<!DOCTYPE html>\n\n<html lang=\"%s\">\n", lang);
   fprintf(html, "<head>\n<meta charset=\"UTF-8\" />\n<meta name=\"viewport\" content=\"width=device-width,initial-scale=1\" />\n");
@@ -35,7 +40,7 @@ void  writeHeader()
   fprintf(html, "</head>\n<body>\n<input type=\"checkbox\" id=\"theme_switch\" class=\"theme_switch\">\n<div id=\"page\">\n<label for=\"theme_switch\" class=\"switch_label\"></label>\n<main id=\"blog\">\n<section>\n");
 }
 
-void writeFooter()
+void writeFooter(void)
 {
   fprintf(html, "</section>\n</main>\n</div>\n<script src=\"/main.js\"></script>\n</body>\n</html>\n");
 }

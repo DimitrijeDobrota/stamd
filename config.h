@@ -6,4 +6,6 @@ void parseConfig(void);
 void writeHeader(void);
 void writeFooter(void);
 
+void writeArticleItem(char*);
+
 #endif
