@@ -1,21 +1,55 @@
-TARGET ?= stamd
-SRC_DIRS ?= .
+.POSIX:
 
-SRCS := $(shell find $(SRC_DIRS) -name "*.c")
-OBJS := $(addsuffix .o,$(basename $(SRCS)))
-DEPS := $(OBJS:.o=.d)
+NAME = stamd
 
-INC_DIRS := $(shell find $(SRC_DIRS) -type d)
-INC_FLAGS := $(addprefix -I,$(INC_DIRS))
+LIBGIT_INC = -I/usr/local/include
+LIBGIT_LIB = -L/usr/local/lib -lgit2
 
-CPPFLAGS ?= $(INC_FLAGS) -MMD -MP
+# use system flags.
+STAMD_CFLAGS = ${LIBGIT_INC} ${CFLAGS}
+STAMD_LDFLAGS = ${LIBGIT_LIB} ${LDFLAGS}
+STAMD_CPPFLAGS = -D_XOPEN_SOURCE=700 -D_DEFAULT_SOURCE -D_BSD_SOURCE
 
-$(TARGET): $(OBJS)
-	$(CC) $(LDFLAGS) $(OBJS) -o $@ $(LOADLIBES) $(LDLIBS)
+SRC = \
+	stamd.c\
+	stamd-index.c
+COMPATSRC = \
+	reallocarray.c\
+	strlcat.c\
+	strlcpy.c
+BIN = \
+	stamd\
+	stamd-index
+HDR = 
 
-.PHONY: clean
+COMPATOBJ = \
+	article.o\
+	config.o\
+	line.o\
+	lineQueue.o\
+	queue.o\
+	text.o\
+
+OBJ = ${SRC:.c=.o} ${COMPATOBJ}
+
+all: ${BIN}
+
+.o:
+	${CC} -o $@ ${LDFLAGS}
+
+.c.o:
+	${CC} -o $@ -c $< ${STAMD_CFLAGS} ${STAMD_CPPFLAGS}
+
+${OBJ}: ${HDR}
+
+stamd: stamd.o ${COMPATOBJ}
+	${CC} -o $@ stamd.o ${COMPATOBJ} ${stamd_LDFLAGS}
+
+stamd-index: stamd-index.o ${COMPATOBJ}
+	${CC} -o $@ stamd-index.o ${COMPATOBJ} ${stamd_LDFLAGS}
+
 clean:
-	$(RM) $(TARGET) $(OBJS) $(DEPS)
+	rm -f ${BIN} ${OBJ}
 
--include $(DEPS)
+.PHONY: all clean
 
