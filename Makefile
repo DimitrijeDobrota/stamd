@@ -2,6 +2,9 @@
 
 NAME = stamd
 
+# paths
+PREFIX = /usr/local
+
 LIBGIT_INC = -I/usr/local/include
 LIBGIT_LIB = -L/usr/local/lib -lgit2
 
@@ -50,5 +53,15 @@ stamd-index: stamd-index.o ${COMPATOBJ}
 clean:
 	rm -f ${BIN} ${OBJ}
 
-.PHONY: all clean
+install: all
+	# installing executable files.
+	mkdir -p ${DESTDIR}${PREFIX}/bin
+	cp -f ${BIN} ${DESTDIR}${PREFIX}/bin
+	for f in ${BIN}; do chmod 755 ${DESTDIR}${PREFIX}/bin/$$f; done
+
+uninstall:
+	# removing executable files.
+	for f in ${BIN}; do rm -f ${DESTDIR}${PREFIX}/bin/$$f; done
+
+.PHONY: all clean install uninstall
 
