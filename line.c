@@ -1,8 +1,15 @@
+#include <ctype.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 
 #include "line.h"
+#include "queue.h"
+#include "text.h"
+
+extern FILE* html;
+
+queue_t lineQueue;
 
 char* text;
 char* lineEnd;
@@ -64,4 +71,29 @@ void splitLine()
   *b = '\0';
   bufferEnd = b - 1;
   text = ++p;
+}
+
+void line_push(tag_t tag, bool parse)
+{
+  if (parse)
+  {
+    fprintf(html, "<%s>", tag_n[tag]);
+    parseText(text, lineEnd);
+  }
+  else
+  {
+    fprintf(html, "<%s>\n", tag_n[tag]);
+  }
+  queue_push(&lineQueue, tag);
+}
+
+void line_pop()
+{
+  tag_t tag = queue_top(&lineQueue);
+  queue_pop(&lineQueue);
+  fprintf(html, "</%s>\n", tag_n[tag]);
+}
+
+bool line_empty(){
+  return queue_empty(&lineQueue);
 }

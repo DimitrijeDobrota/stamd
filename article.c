@@ -6,7 +6,6 @@
 
 #include "line.h"
 #include "queue.h"
-#include "lineQueue.h"
 #include "text.h"
 
 extern queue_t lineQueue;

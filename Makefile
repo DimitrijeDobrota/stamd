@@ -26,7 +26,6 @@ COMPATOBJ = \
 	article.o\
 	config.o\
 	line.o\
-	lineQueue.o\
 	queue.o\
 	text.o\
 
