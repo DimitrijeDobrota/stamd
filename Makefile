@@ -1,4 +1,4 @@
-TARGET ?= program.out
+TARGET ?= stamd
 SRC_DIRS ?= .
 
 SRCS := $(shell find $(SRC_DIRS) -name "*.c")
