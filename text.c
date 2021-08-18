@@ -13,6 +13,7 @@ char* searchTwo(char c1, char c2, char* start, char* end);
 void tagSearchOne(char* current, char* end, char* open, char* close);
 void tagSearchTwo(char* current, char* end, char* open, char* close);
 void tagSearch(bool image, char* current, char* end);
+void tagSearchCode (char* current, char* end);
 
 
 char* control; // before returning from any tagSearch control needs to be set if the search was successfull
@@ -20,7 +21,7 @@ void parseText(char* current, char* end)
 {
   while  (current < end)
   {
-    control=current;
+    control = current;
     if (*current == *(current + 1))    // handle tags that require double prefix
     {
       if (*current == '*' || *current == '_') tagSearchTwo(current, end, "<strong>", "</strong>");
@@ -30,7 +31,7 @@ void parseText(char* current, char* end)
     {
       if (*current == '*' || *current == '_') tagSearchOne(current, end, "<em>", "</em>");
       else if (*current == '\"') tagSearchOne(current, end, "&quot;", "&quot;");
-      else if (*current == '`') tagSearchOne(current, end, "<code>", "</code>");
+      else if (*current == '`') tagSearchCode(current, end);
       else if (*current == '[') tagSearch(false, current, end);
       else if (*current == '!') tagSearch(true, current, end);
     }
@@ -86,6 +87,17 @@ void tagSearch(bool image, char* current, char* end)
 
   control = p2 + 1;  // continue to parse text just after ")"
 }
+void tagSearchCode (char* current, char* end)
+{
+  char* start = current + 1;
+  char* p = searchOne(* current, start, end);
+  if (p == end) return;
+  fprintf(html, "<code>");
+  printEscaped(start, p);
+  fprintf(html, "</code>");
+  control = p + 1;
+}
+
 
 void tagSearchOne(char* current, char* end, char* open, char* close)
 {
@@ -104,7 +116,7 @@ void tagSearchTwo(char* current, char* end, char* open, char* close)
   char* p = searchTwo(*current, *current, start, end);
   if (p == end) return;
   fprintf(html, "%s", open);
-  parseText(start, p);
+  parseText(current + 1, p);
   fprintf(html, "%s", close);
   control = p + 2;
 }
@@ -120,4 +132,17 @@ char* searchTwo(char c1, char c2, char* start, char* end)
 {
   char* p = strchr(start, c1);
   return (p != NULL && *(p + 1) == c2 && p < end) ? p : end;
+}
+
+void printEscaped(char* start, char* end){
+  while (start < end)
+  {
+    if (*start == '<')
+      fprintf(html, "&lt");
+    else if (*start == '>')
+      fprintf(html, "&gt");
+    else
+      fputc(*start, html);
+    start++;
+  }
 }

@@ -90,12 +90,15 @@ void startCodeIndent(int currentIndent)
 {
   line_push(pre, false);
   line_push(code, false);
+  printEscaped(line + currentIndent, lineEnd); // Nullify the indent when code block is started
+  fputc('\n', html);
   while (hasMoreLines(md))
   {
-    fprintf(html, "%s\n", line + currentIndent); // Nullify the indend when code block is started
     readLine(md);
     splitLine();
     if (*linebuffer == '\0') return;
+    printEscaped(line + currentIndent, lineEnd); // Nullify the indent when code block is started
+    fputc('\n', html);
   }
 }
 
@@ -108,7 +111,8 @@ void startCodeBlock()
     readLine(md);
     splitLine();
     if (strcmp(linebuffer, "```") == 0) return;
-    fprintf(html, "%s\n", line);   // print the whole line
+    printEscaped(line, lineEnd);   // print the whole line
+    fputc('\n', html);
   }
 }
 
@@ -158,7 +162,7 @@ int getBlockquoteLen()
   return p - linebuffer;
 }
 
-// Function to start new level of indend with UL
+// Function to start new level of indent with UL
 // If blank line is reached 1 is returned, to end the recursion
 tag_t list_tag;
 char list_sign;
@@ -183,7 +187,7 @@ int startList(tag_t currentTag, char currentSign, int currentIndent)
         fprintf(html, "\n");
         int blankLine = startList(list_tag, list_sign, indent);
         line_pop();
-        if (blankLine ) return 1; // blank line must end all Uls, propagate throught recursion
+        if (blankLine ) return 1; // blank line must end all Uls, propagate throughout recursion
       }
       else
       {
@@ -197,22 +201,16 @@ int startList(tag_t currentTag, char currentSign, int currentIndent)
         // Close the current LI
         line_pop();
 
-        // Curent line will be handled by the lower levels
+        // Current line will be handled by the lower levels
         return 0;
       }
 
-      // Allow the same inded level to have a different type of a list
-      if (currentTag != list_tag)
+      // Is sign of the item has changed that means that new list must be started
+      if (currentSign != list_sign)
       {
         line_pop();
         line_push(list_tag, false);
         currentTag = list_tag;
-      }
-      // Switch in the sign means new list
-      else if (currentSign != list_sign)
-      {
-        line_pop();
-        line_push(list_tag, false);
         currentSign = list_sign;
       }
 
@@ -221,7 +219,7 @@ int startList(tag_t currentTag, char currentSign, int currentIndent)
       line_push(li, true);
     }
     else if (line[0] == '\0') return 1;              // blank line must end all Uls
-    else parseText(line + currentIndent + 1, lineEnd);   // Current LI spans multiple lines. Just print the text of subsiquent lines
+    else parseText(line + currentIndent + 1, lineEnd);   // Current LI spans multiple lines. Just print the text of subsequent lines
   }
-  return 0;
+  return 1;
 }
