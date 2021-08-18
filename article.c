@@ -174,11 +174,10 @@ int startList(tag_t currentTag, char currentSign, int currentIndent)
   {
     readLine(md);
     splitLine();
-    list_tag = ul;
     list_sign = *bufferEnd;
     if (list_sign == '-' || list_sign == '+' || list_sign == '*' || list_sign == '.' && isdigit(*(bufferEnd - 1)))
     {
-      if (list_sign == '.') list_tag = ol;
+      list_tag = (list_sign == '.') ? ol :  ul;
 
       if (currentIndent < indent)
       {

@@ -116,7 +116,7 @@ void tagSearchTwo(char* current, char* end, char* open, char* close)
   char* p = searchTwo(*current, *current, start, end);
   if (p == end) return;
   fprintf(html, "%s", open);
-  parseText(current + 1, p);
+  parseText(current + 2, p);
   fprintf(html, "%s", close);
   control = p + 2;
 }
