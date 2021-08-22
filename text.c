@@ -7,45 +7,42 @@
 
 extern FILE* html;
 
-char* searchOne(char c, char* start, char* end);
+typedef char*(*search)(char, char, char*, char*);
+typedef void(*print)(char*, char*);
+
+char* searchOne(char c, char foo, char* start, char* end);
 char* searchTwo(char c1, char c2, char* start, char* end);
 
-void tagSearchOne(char* current, char* end, char* open, char* close);
-void tagSearchTwo(char* current, char* end, char* open, char* close);
-void tagSearch(bool image, char* current, char* end);
-void tagSearchCode (char* current, char* end);
+void tagSearchLink(char* current, char* end, bool image);
+void tagSearchCode(char* current, char* end);
+void tagSearchMatch(char* start, char* end, char* tag, search searchCall, print printCall);
 
 
-char* control; // before returning from any tagSearch control needs to be set if the search was successfull
+char* control; // before returning from any tagSearch control needs to be set if the search was successful
 void parseText(char* current, char* end)
 {
-  while  (current < end)
+  for (; current < end; current++)
   {
     control = current;
     if (*current == *(current + 1))    // handle tags that require double prefix
     {
-      if (*current == '*' || *current == '_') tagSearchTwo(current, end, "<strong>", "</strong>");
-      else if (*current == '~') tagSearchTwo(current, end, "<s>", "</s>");
+      if (*current == '*' || *current == '_') tagSearchMatch(current + 2, end, "strong", &searchTwo, &parseText);
+      else if (*current == '~') tagSearchMatch(current + 2, end, "s", &searchTwo, &parseText);
     }
     else     // handle tags that require a single prefix
     {
-      if (*current == '*' || *current == '_') tagSearchOne(current, end, "<em>", "</em>");
-      else if (*current == '\"') tagSearchOne(current, end, "&quot;", "&quot;");
-      else if (*current == '`') tagSearchCode(current, end);
-      else if (*current == '[') tagSearch(false, current, end);
-      else if (*current == '!') tagSearch(true, current, end);
+      if (*current == '*' || *current == '_') tagSearchMatch(current + 1, end, "em", &searchOne, &parseText);
+      else if (*current == '`') tagSearchMatch(current + 1, end, "code", &searchOne, &printEscaped);
+      else if (*current == '[') tagSearchLink(current, end, false);
+      else if (*current == '!') tagSearchLink(current, end, true);
     }
-    if (control != current)    // if there has been change skip already parsed text
-    {
-      current = control;
-      continue;
-    }
-    fprintf(html, "%c", *current);
-    current++;
+
+    if (control != current) current = control;
+    else fprintf(html, "%c", *current);
   }
 }
 
-void tagSearch(bool image, char* current, char* end)
+void tagSearchLink(char* current, char* end, bool image)
 {
   char* start = current;
   if (image) start++;
@@ -54,11 +51,11 @@ void tagSearch(bool image, char* current, char* end)
   char* p1 = searchTwo(']', '(', start, end);
   if (p1 == end) return;
 
-  char* p2 = searchOne(')', p1 + 2, end);
+  char* p2 = searchOne(')', ' ', p1 + 2, end);
   if (p2 == end) return;
 
   *p1 = '\0';   // start->p1 = text
-  *p2 = '\0';   // p1->p2 = link
+  *p2 = '\0';   // p1->p2 = link if there is no blank
 
   p1 += 2; // step over "]("
   start += 1; // step over "["
@@ -85,44 +82,21 @@ void tagSearch(bool image, char* current, char* end)
       fprintf(html, "<a href=\"%s\" title=%s>%s</a>", p1, blank, start);
   }
 
-  control = p2 + 1;  // continue to parse text just after ")"
+  control = p2;
 }
-void tagSearchCode (char* current, char* end)
+
+void tagSearchMatch(char* start, char* end, char* tag, search searchCall, print printCall)
 {
-  char* start = current + 1;
-  char* p = searchOne(* current, start, end);
+  char c = *(start - 1);
+  char* p = searchCall(c, c, start, end);
   if (p == end) return;
-  fprintf(html, "<code>");
-  printEscaped(start, p);
-  fprintf(html, "</code>");
-  control = p + 1;
+  fprintf(html, "<%s>", tag);
+  printCall(start, p);
+  fprintf(html, "</%s>", tag);
+  control = p + (searchCall == searchTwo);
 }
 
-
-void tagSearchOne(char* current, char* end, char* open, char* close)
-{
-  char* start = current + 1;
-  char* p = searchOne(* current, start, end);
-  if (p == end) return;
-  fprintf(html, "%s", open);
-  parseText(current + 1, p);
-  fprintf(html, "%s", close);
-  control = p + 1;
-}
-
-void tagSearchTwo(char* current, char* end, char* open, char* close)
-{
-  char* start = current + 2;
-  char* p = searchTwo(*current, *current, start, end);
-  if (p == end) return;
-  fprintf(html, "%s", open);
-  parseText(current + 2, p);
-  fprintf(html, "%s", close);
-  control = p + 2;
-}
-
-
-char* searchOne(char c, char* start, char* end)
+char* searchOne(char c, char foo, char* start, char* end)
 {
   char* p = strchr(start, c);
   return (p != NULL && p < end) ? p : end;
@@ -134,15 +108,13 @@ char* searchTwo(char c1, char c2, char* start, char* end)
   return (p != NULL && *(p + 1) == c2 && p < end) ? p : end;
 }
 
-void printEscaped(char* start, char* end){
-  while (start < end)
-  {
+void printEscaped(char* start, char* end)
+{
+  for (; start < end; start++)
     if (*start == '<')
       fprintf(html, "&lt");
     else if (*start == '>')
       fprintf(html, "&gt");
     else
       fputc(*start, html);
-    start++;
-  }
 }
