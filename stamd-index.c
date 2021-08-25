@@ -25,7 +25,7 @@ int main(int argc, char* argv[])
 
   html = stdout;
 
-  writeHeader();
+  writeHeader(true);
   fprintf(html, "<h1>Articles</h1><ul>\n");
   for (int i = 1; i < argc; i++)
   {

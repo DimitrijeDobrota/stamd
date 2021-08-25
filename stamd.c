@@ -37,31 +37,27 @@ int main(int argc, char* argv[])
     }
   }
 
-  if (!articledir)
-    usage(argv[0]);
+  if (!articledir) usage(argv[0]);
 
   if (!realpath(articledir, articledirabs))
-    err(1, articledir);
+    err(EXIT_FAILURE, articledir);
 
   if (!outdir)
     strcpy(outdirabs, articledirabs);
   else if (!realpath(outdir, outdirabs))
-    err(1, outdir);
+    err(EXIT_FAILURE, outdir);
 
   sprintf(mdfile, "%s/article.md", articledirabs);
   sprintf(htmlfile, "%s%s.html", outdirabs, strrchr(articledirabs, '/'));
   sprintf(configfile, "%s/config.txt", articledirabs);
 
-  if (!(md = fopen(mdfile, "r")))
-    err(1, mdfile);
-  if (!(config = fopen(configfile, "r")))
-    err(1, configfile);
-  if (!(html = fopen(htmlfile, "w")))
-    err(1, htmlfile);
+  if (!(md = fopen(mdfile, "r"))) err(EXIT_FAILURE, mdfile);
+  if (!(config = fopen(configfile, "r"))) err(EXIT_FAILURE, configfile);
+  if (!(html = fopen(htmlfile, "w"))) err(EXIT_FAILURE, htmlfile);
 
   parseConfig();
 
-  writeHeader();
+  writeHeader(false);
   parseArticle();
   writeFooter();
 

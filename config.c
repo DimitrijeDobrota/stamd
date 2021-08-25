@@ -1,4 +1,5 @@
 #include "config.h"
+#include "stdbool.h"
 #include "stdio.h"
 #include "string.h"
 
@@ -28,7 +29,7 @@ void writeArticleItem(char* name)
   fprintf(html, "<li><a href=\"./%s.html\">%s - %s</a></li>\n", name, date, title);
 }
 
-void  writeHeader(void)
+void  writeHeader(bool index)
 {
   fprintf(html, "<!DOCTYPE html>\n\n<html lang=\"%s\">\n", lang);
   fprintf(html, "<head>\n<meta charset=\"UTF-8\" />\n<meta name=\"viewport\" content=\"width=device-width,initial-scale=1\" />\n");
@@ -37,7 +38,8 @@ void  writeHeader(void)
   fprintf(html, "<link rel=\"icon\" type=\"image/png\" sizes=\"32x32\" href=\"/pix/favicon-32x32.png\">\n<link rel=\"icon\" type=\"image/png\" sizes=\"16x16\" href=\"/pix/favicon-16x16.png\">\n");
   fprintf(html, "<link rel=\"manifest\" href=\"/site.webmanifest\">\n\n");
   fprintf(html, "<meta name=\"description\" content=\"%s - %s\" />\n<title>%s</title>\n", date, title, title);
-  fprintf(html, "</head>\n<body>\n<input type=\"checkbox\" id=\"theme_switch\" class=\"theme_switch\">\n<div id=\"page\">\n<label for=\"theme_switch\" class=\"switch_label\"></label>\n<main id=\"blog\">\n<section>\n");
+  fprintf(html, "</head>\n<body>\n<input type=\"checkbox\" id=\"theme_switch\" class=\"theme_switch\">\n<div id=\"page\">\n<label for=\"theme_switch\" class=\"switch_label\"></label>\n<main id=\"blog\">\n");
+  fprintf(html, "<a href=\"%s/\"><-- back</a>\n<section>\n", index ? ".." : ".");
 }
 
 void writeFooter(void)
