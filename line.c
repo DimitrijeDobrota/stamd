@@ -4,12 +4,12 @@
 #include <stdlib.h>
 
 #include "line.h"
-#include "queue.h"
+#include "stack.h"
 #include "text.h"
 
 extern FILE* html;
 
-queue_t lineQueue;
+stack_t lineStack;
 
 char* text;
 char* lineEnd;
@@ -84,16 +84,16 @@ void line_push(tag_t tag, bool parse)
   {
     fprintf(html, "<%s>\n", tag_n[tag]);
   }
-  queue_push(&lineQueue, tag);
+  stack_push(&lineStack, tag);
 }
 
 void line_pop()
 {
-  tag_t tag = queue_top(&lineQueue);
-  queue_pop(&lineQueue);
+  tag_t tag = stack_top(&lineStack);
+  stack_pop(&lineStack);
   fprintf(html, "</%s>\n", tag_n[tag]);
 }
 
 bool line_empty(){
-  return queue_empty(&lineQueue);
+  return stack_empty(&lineStack);
 }

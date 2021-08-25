@@ -5,10 +5,10 @@
 #include <string.h>
 
 #include "line.h"
-#include "queue.h"
+#include "stack.h"
 #include "text.h"
 
-extern queue_t lineQueue;
+extern stack_t lineStack;
 enum tag_t;
 
 extern FILE* md;
@@ -34,9 +34,9 @@ void startParagraph(void);
 
 void parseArticle(void)
 {
-  queue_ctor(&lineQueue);
+  stack_ctor(&lineStack);
   parseDocument(md, parseArticleLine);
-  queue_dtor(&lineQueue);
+  stack_dtor(&lineStack);
 }
 
 void parseArticleLine()

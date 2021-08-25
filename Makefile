@@ -29,7 +29,7 @@ COMPATOBJ = \
 	article.o\
 	config.o\
 	line.o\
-	queue.o\
+	stack.o\
 	text.o\
 
 OBJ = ${SRC:.c=.o} ${COMPATOBJ}
@@ -45,10 +45,10 @@ all: ${BIN}
 ${OBJ}: ${HDR}
 
 stamd: stamd.o ${COMPATOBJ}
-	${CC} -o $@ stamd.o ${COMPATOBJ} ${stamd_LDFLAGS}
+	${CC} -o $@ stamd.o ${COMPATOBJ} ${STAMD_LDFLAGS}
 
 stamd-index: stamd-index.o ${COMPATOBJ}
-	${CC} -o $@ stamd-index.o ${COMPATOBJ} ${stamd_LDFLAGS}
+	${CC} -o $@ stamd-index.o ${COMPATOBJ} ${STAMD_LDFLAGS}
 
 clean:
 	rm -f ${BIN} ${OBJ}
