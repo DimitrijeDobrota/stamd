@@ -73,19 +73,19 @@ void splitLine()
   text = ++p;
 }
 
-void line_push(tag_t tag, bool parse)
+void line_push_tag(tag_t tag)
 {
-  if (parse)
-  {
+    fprintf(html, "<%s>\n", tag_n[tag]);
+    stack_push(&lineStack, tag);
+}
+
+void line_push_text(tag_t tag)
+{
     fprintf(html, "<%s>", tag_n[tag]);
     parseText(text, lineEnd);
-  }
-  else
-  {
-    fprintf(html, "<%s>\n", tag_n[tag]);
-  }
-  stack_push(&lineStack, tag);
+    stack_push(&lineStack, tag);
 }
+
 
 void line_pop()
 {

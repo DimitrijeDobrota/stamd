@@ -74,7 +74,7 @@ void parseArticleLine()
 void startParagraph()
 {
   text = line;
-  line_push(p, true);
+  line_push_text(p);
   while (hasMoreLines(md))
   {
     readLine(md);
@@ -88,8 +88,8 @@ void startParagraph()
 
 void startCodeIndent(int currentIndent)
 {
-  line_push(pre, false);
-  line_push(code, false);
+  line_push_tag(pre);
+  line_push_tag(code);
   printEscaped(line + currentIndent, lineEnd); // Nullify the indent when code block is started
   fputc('\n', html);
   while (hasMoreLines(md))
@@ -104,8 +104,8 @@ void startCodeIndent(int currentIndent)
 
 void startCodeBlock()
 {
-  line_push(pre, false);
-  line_push(code, false);
+  line_push_tag(pre);
+  line_push_tag(code);
   while (hasMoreLines(md))
   {
     readLine(md);
@@ -118,8 +118,8 @@ void startCodeBlock()
 
 int startBlockquote(int currentIndent)
 {
-  line_push(blockquote, false);
-  line_push(p, true);
+  line_push_tag(blockquote);
+  line_push_text(p);
   while (hasMoreLines(md))
   {
     readLine(md);
@@ -141,7 +141,7 @@ int startBlockquote(int currentIndent)
         return 0;
       }
 
-      line_push(p, true);
+      line_push_text(p);
     }
     else if (line[0] == '\0') return 1;
     else parseText(line, lineEnd);
@@ -168,8 +168,8 @@ tag_t list_tag;
 char list_sign;
 int startList(tag_t currentTag, char currentSign, int currentIndent)
 {
-  line_push(currentTag, false);
-  line_push(li, true);
+  line_push_tag(currentTag);
+  line_push_text(li);
   while (hasMoreLines(md))
   {
     readLine(md);
@@ -208,14 +208,14 @@ int startList(tag_t currentTag, char currentSign, int currentIndent)
       if (currentSign != list_sign)
       {
         line_pop();
-        line_push(list_tag, false);
+        line_push_tag(list_tag);
         currentTag = list_tag;
         currentSign = list_sign;
       }
 
       // We are at the good indent level
       // Start a new list item
-      line_push(li, true);
+      line_push_text(li);
     }
     else if (line[0] == '\0') return 1;              // blank line must end all Uls
     else parseText(line + currentIndent + 1, lineEnd);   // Current LI spans multiple lines. Just print the text of subsequent lines
