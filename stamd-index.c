@@ -20,14 +20,31 @@ int main(int argc, char* argv[])
 {
   char  articledirabs[PATH_MAX + 1];
   char  configfile[PATH_MAX + 1];
+  char  *categories;
 
   if (argc < 2) usage(*argv);
 
   html = stdout;
+  categories = "Articles";
 
-  writeHeader(true);
-  fprintf(html, "<h1>Articles</h1><ul>\n");
-  for (int i = 1; i < argc; i++)
+  int i = 1;
+  if (argv[1][0] == '-' && argv[1][1] == 'c')
+  {
+    categories = argv[2];
+    i=3;
+  }
+
+  writeHeader();
+  if (strchr(categories, ' '))
+  {
+    writeCategories(categories);
+    fprintf(html, "<h1>Articles</h1><ul>\n");
+  }
+  else
+    fprintf(html, "<h1>%s</h1><ul>\n", categories);
+
+
+  for (; i < argc; i++)
   {
     if (!realpath(argv[i], articledirabs))
       err(1, argv[i]);

@@ -2,11 +2,11 @@
 #define CONFIG_H
 
 #include <stdbool.h>
-
 void parseConfig(void);
 
-void writeHeader(bool index);
+void writeHeader();
 void writeFooter(void);
+void writeCategories(char *c);
 
 void writeArticleItem(char*);
 

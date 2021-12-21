@@ -57,7 +57,7 @@ int main(int argc, char* argv[])
 
   parseConfig();
 
-  writeHeader(false);
+  writeHeader();
   parseArticle();
   writeFooter();
 
