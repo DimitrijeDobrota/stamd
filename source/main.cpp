@@ -1,21 +1,13 @@
-#include <algorithm>
-#include <format>
 #include <fstream>
 #include <iostream>
-#include <memory>
-#include <numeric>
 #include <sstream>
 
-#include <hemplate/attribute.hpp>
-#include <hemplate/classes.hpp>
 #include <poafloc/poafloc.hpp>
 
 #include "article.hpp"
+#include "index.hpp"
 #include "maddy/parser.h"
 #include "utility.hpp"
-
-using article_list = std::vector<std::shared_ptr<article>>;
-using categories_t = article::categories_t;
 
 void preprocess(article& article, std::istream& ist)
 {
@@ -48,118 +40,6 @@ void preprocess(article& article, std::istream& ist)
   }
 }
 
-void create_index(const std::string& name,
-                  const article_list& articles,
-                  const categories_t& categories)
-{
-  using namespace hemplate;  // NOLINT
-
-  std::ofstream ost(name + ".html");
-  std::stringstream strs;
-
-  strs << html::h1(name);
-  strs << html::ul().set("class", "index");
-  for (const auto& article : articles)
-  {
-    if (article->is_hidden()) continue;
-    const auto& title = article->get_title();
-    const auto& date  = article->get_date();
-
-    strs << html::li()
-                .add(html::div(std::format("{} - ", date)))
-                .add(html::div().add(html::a(title).set("href", title)));
-  };
-  strs << html::ul();
-
-  article index(name, categories);
-  index.write(strs.str(), ost);
-}
-
-void create_atom(const std::string& name, const article_list& articles)
-{
-  using namespace hemplate;  // NOLINT
-
-  static const char* base    = "https://dimitrijedobrota.com/blog";
-  static const char* loc     = "https://dimitrijedobrota.com/blog/atom.feed";
-  static const char* updated = "2003-12-13T18:30:02Z";
-  static const char* summary = "Click on the article link to read...";
-
-  std::ofstream ost(name + ".atom");
-
-  elementList content = std::accumulate(
-      begin(articles),
-      end(articles),
-      elementList(),
-      [](elementList&& list, const auto& article)
-      {
-        const auto title = article->get_title();
-        list.add(atom::entry()
-                     .add(atom::title(title))
-                     .add(atom::link().set(
-                         "href", std::format("{}/{}.html", base, title)))
-                     .add(atom::updated(updated))
-                     .add(atom::summary(summary)));
-        return std::move(list);
-      });
-
-  ost << atom::xml({{"version", "1.0"}, {"encoding", "utf-8"}});
-  ost << atom::feed();
-  ost << atom::title(name);
-  ost << atom::link().set("href", base);
-  ost << atom::link({{"rel", "self"}, {"href", loc}});
-  ost << atom::id(base);
-  ost << atom::updated(updated);
-  ost << atom::author().add(atom::name(name));
-  ost << atom::feed();
-  ost << content;
-  ost << atom::feed(content);
-}
-
-void create_rss(const std::string& name, const article_list& articles)
-{
-  using namespace hemplate;  // NOLINT
-
-  std::ofstream ost(name + ".rss");
-
-  static const char* author      = "Dimitrije Dobrota";
-  static const char* email       = "mail@dimitrijedobrota.com";
-  static const char* base        = "https://dimitrijedobrota.com/blog";
-  static const char* description = "Contents of Dimitrije Dobrota's webpage";
-  static const char* loc     = "https://dimitrijedobrota.com/blog/index.rss";
-  static const char* updated = "2003-12-13T18:30:02Z";
-
-  elementList content = std::accumulate(
-      begin(articles),
-      end(articles),
-      elementList(),
-      [](elementList&& list, const auto& article)
-      {
-        const auto title = article->get_title();
-        list.add(rss::item()
-                     .add(rss::title(title))
-                     .add(rss::link(std::format("{}/{}.html", base, title)))
-                     .add(rss::guid(std::format("{}/{}.html", base, title)))
-                     .add(rss::pubDate(updated))
-                     .add(rss::author(std::format("{} ({})", email, author))));
-        return std::move(list);
-      });
-
-  ost << rss::xml({{"version", "1.0"}, {"encoding", "utf-8"}});
-  ost << rss::rss(
-      {{"version", "2.0"}, {"xmlns:atom", "http://www.w3.org/2005/Atom"}});
-  ost << rss::channel();
-  ost << rss::title(name);
-  ost << rss::link(base);
-  ost << rss::description(description);
-  ost << rss::generator("stamd");
-  ost << rss::language("en-us");
-  ost << rss::atomLink(
-      {{"href", loc}, {"rel", "self"}, {"type", "application/rss+xml"}});
-  ost << content;
-  ost << rss::channel();
-  ost << rss::rss();
-}
-
 struct arguments_t
 {
   std::string output_dir = ".";
@@ -177,8 +57,7 @@ int parse_opt(int key, const char* arg, poafloc::Parser* parser)
     case poafloc::ARG:
       args->articles.emplace_back(arg);
       break;
-    defaut:
-      poafloc::help(parser, stderr, poafloc::STD_USAGE);
+    default:
       break;
   }
   return 0;
@@ -200,6 +79,8 @@ static const poafloc::arg_t arg {
 
 int main(int argc, char* argv[])
 {
+  using namespace stamd;  // NOLINT
+
   using category_map_t = std::unordered_map<std::string, article_list>;
 
   arguments_t args;
@@ -234,8 +115,17 @@ int main(int argc, char* argv[])
     }
   }
 
-  create_rss("index", all_articles);
-  create_atom("index", all_articles);
+  std::ofstream atom("atom.xml");
+  std::ofstream rss("rss.xml");
+  std::ofstream sitemap("sitemap.xml");
+  std::ofstream robots("robots.txt");
+
+  create_sitemap(sitemap, all_articles);
+  create_robots(robots);
+
+  create_rss(rss, "index", all_articles);
+  create_atom(atom, "index", all_articles);
+
   create_index("index", all_articles, all_categories);
   for (const auto& [category, articles] : category_map)
   {

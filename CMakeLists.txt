@@ -4,7 +4,7 @@ include(cmake/prelude.cmake)
 
 project(
     stamd
-    VERSION 0.2.0
+    VERSION 0.2.1
     DESCRIPTION "Static Markdown Page Generator"
     HOMEPAGE_URL "https://git.dimitrijedobrota.com/stamd.git"
     LANGUAGES CXX
@@ -32,6 +32,7 @@ FetchContent_MakeAvailable(maddy)
 add_library(
     stamd_lib OBJECT
     source/article.cpp
+    source/index.cpp
 )
 
 target_link_libraries(stamd_lib PUBLIC hemplate::hemplate)

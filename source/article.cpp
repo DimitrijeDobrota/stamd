@@ -62,6 +62,7 @@ void article::write(const std::string& data, std::ostream& ost)
   static const attributeList description = {{"name", "description"},
                                             {"content", description_s}};
 
+  ost << html::doctype();
   ost << html::html().set("lang", get_language());
   ost << html::head()
              .add(html::title(get_title()))
