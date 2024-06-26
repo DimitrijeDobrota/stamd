@@ -4,7 +4,7 @@ include(cmake/prelude.cmake)
 
 project(
     stamd
-    VERSION 0.2.2
+    VERSION 0.2.3
     DESCRIPTION "Static Markdown Page Generator"
     HOMEPAGE_URL "https://git.dimitrijedobrota.com/stamd.git"
     LANGUAGES CXX
@@ -15,16 +15,9 @@ include(cmake/variables.cmake)
 
 # ---- Declare dependencies ----
 
+find_package(md4c CONFIG REQUIRED)
 find_package(poafloc 1 CONFIG REQUIRED)
 find_package(hemplate 0.1 CONFIG REQUIRED)
-
-include(FetchContent)
-
-FetchContent_Declare(
-  maddy
-  URL https://github.com/progsource/maddy/releases/download/1.3.0/maddy-src.zip
-)
-FetchContent_MakeAvailable(maddy)
 
 
 # ---- Declare library ----
@@ -54,7 +47,7 @@ set_property(TARGET stamd_exe PROPERTY OUTPUT_NAME stamd)
 
 target_compile_features(stamd_exe PRIVATE cxx_std_20)
 
-target_link_libraries(stamd_exe PRIVATE poafloc maddy stamd_lib)
+target_link_libraries(stamd_exe PRIVATE poafloc md4c::md4c-html stamd_lib)
 
 # ---- Install rules ----
 

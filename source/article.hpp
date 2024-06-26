@@ -18,7 +18,9 @@ public:
   {
   }
 
-  void write(const std::string& data, std::ostream& ost);
+  void write_header(std::ostream& ost) const;
+  void write_footer(std::ostream& ost) const;
+
   void insert(const std::string& category) { m_categories.emplace(category); }
   void insert(const std::string& key, const std::string& value)
   {

@@ -22,7 +22,8 @@ void create_rss(std::ostream& ost,
                 const std::string& name,
                 const article_list& articles);
 
-void create_index(const std::string& name,
+void create_index(std::ostream& ost,
+                  const std::string& name,
                   const article_list& articles,
                   const categories_t& categories);
 

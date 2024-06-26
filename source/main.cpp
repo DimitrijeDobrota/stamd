@@ -3,11 +3,11 @@
 #include <iostream>
 #include <sstream>
 
+#include <md4c-html.h>
 #include <poafloc/poafloc.hpp>
 
 #include "article.hpp"
 #include "index.hpp"
-#include "maddy/parser.h"
 #include "utility.hpp"
 
 void preprocess(article& article, std::istream& ist)
@@ -43,7 +43,7 @@ void preprocess(article& article, std::istream& ist)
 
 struct arguments_t
 {
-  std::string output_dir = ".";
+  std::filesystem::path output_dir = ".";
   std::vector<std::filesystem::path> files;
   bool index = false;
 
@@ -89,6 +89,12 @@ static const poafloc::arg_t arg {
 };
 // NOLINTEND
 
+void process_output(const MD_CHAR* str, MD_SIZE size, void* data)
+{
+  std::ofstream& ofs = *static_cast<std::ofstream*>(data);
+  ofs << std::string(str, size);
+}
+
 int main(int argc, char* argv[])
 {
   using namespace stamd;  // NOLINT
@@ -106,7 +112,6 @@ int main(int argc, char* argv[])
   category_map_t category_map;
   categories_t all_categories;
   article_list all_articles;
-  maddy::Parser parser;
 
   for (const auto& path : args.files)
   {
@@ -119,8 +124,22 @@ int main(int argc, char* argv[])
     preprocess(*article, ifs);
 
     // filename can change in preprocessing phase
-    std::ofstream ofs(article->get_filename());
-    article->write(parser.Parse(ifs), ofs);
+    std::filesystem::path out = args.output_dir / article->get_filename();
+    std::ofstream ofs(out);
+    std::stringstream sst;
+
+    std::cerr << out.string() << std::endl;
+
+    sst << ifs.rdbuf();
+
+    article->write_header(ofs);
+    md_html(sst.str().c_str(),
+            static_cast<MD_SIZE>(sst.str().size()),
+            process_output,
+            &ofs,
+            MD_DIALECT_GITHUB,
+            0);
+    article->write_footer(ofs);
 
     if (!article->is_hidden())
     {
@@ -137,10 +156,11 @@ int main(int argc, char* argv[])
        [](const auto& lft, const auto& rht)
        { return lft->get_date() > rht->get_date(); });
 
-  std::ofstream atom("atom.xml");
-  std::ofstream rss("rss.xml");
-  std::ofstream sitemap("sitemap.xml");
-  std::ofstream robots("robots.txt");
+  std::ofstream atom(args.output_dir / "atom.xml");
+  std::ofstream rss(args.output_dir / "rss.xml");
+  std::ofstream sitemap(args.output_dir / "sitemap.xml");
+  std::ofstream robots(args.output_dir / "robots.txt");
+  std::ofstream index(args.output_dir / "index.html");
 
   create_sitemap(sitemap, all_articles);
   create_robots(robots);
@@ -148,11 +168,12 @@ int main(int argc, char* argv[])
   create_rss(rss, "index", all_articles);
   create_atom(atom, "index", all_articles);
 
-  create_index("index", all_articles, all_categories);
+  create_index(index, "index", all_articles, all_categories);
   for (const auto& [category, articles] : category_map)
   {
     auto ctgry = category;
-    create_index(normalize(ctgry), articles, {});
+    std::ofstream ost(args.output_dir / (normalize(ctgry) + ".html"));
+    create_index(ost, category, articles, {});
   }
 
   return 0;

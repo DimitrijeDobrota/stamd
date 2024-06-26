@@ -9,17 +9,19 @@ Checks: "*,\
   -*-braces-around-statements,\
   -bugprone-argument-comment,\
   -bugprone-easily-swappable-parameters,\
+  -concurrency-mt-unsafe,\
   -cppcoreguidelines-avoid-magic-numbers,\
+  -fuchsia-multiple-inheritance,\
   -hicpp-signed-bitwise,\
   -llvm-header-guard,\
   -llvm-include-order,\
+  -misc-no-recursion,\
+  -misc-non-private-member-variables-in-classes,\
   -modernize-use-nodiscard,\
   -modernize-use-trailing-return-type,\
   -readability-function-cognitive-complexity,\
-  -readability-magic-numbers,\
-  fuchsia-multiple-inheritance,\
-  -misc-no-recursion,\
-  -misc-non-private-member-variables-in-classes"
+  -readability-magic-numbers
+"
 WarningsAsErrors: ''
 CheckOptions:
   - key: 'bugprone-argument-comment.StrictMode'

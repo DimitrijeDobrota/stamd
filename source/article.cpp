@@ -69,7 +69,7 @@ void article::print_categories(std::ostream& ost,
   ost << html::nav();
 }
 
-void article::write(const std::string& data, std::ostream& ost)
+void article::write_header(std::ostream& ost) const
 {
   using namespace hemplate;  // NOLINT
 
@@ -128,8 +128,11 @@ void article::write(const std::string& data, std::ostream& ost)
              .set("class", "switch_label");
 
   if (!m_categories.empty()) print_categories(ost, m_categories);
+}
 
-  ost << data;
+void article::write_footer(std::ostream& ost) const
+{
+  using namespace hemplate;  // NOLINT
 
   ost << html::main();
 
@@ -142,7 +145,9 @@ void article::write(const std::string& data, std::ostream& ost)
   }
 
   ost << html::div();
-  ost << html::script(" ").set("source", "/scripts/main.js");
+  ost << html::script(" ")
+             .set("type", "text/javascript")
+             .set("source", "/scripts/main.js");
   ost << html::body();
   ost << html::html();
 }

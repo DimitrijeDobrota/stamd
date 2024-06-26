@@ -1,4 +1,5 @@
 #include <algorithm>
+#include <chrono>
 #include <format>
 #include <fstream>
 #include <numeric>
@@ -11,33 +12,32 @@
 
 namespace stamd {
 
-void create_index(const std::string& name,
+void create_index(std::ostream& ost,
+                  const std::string& name,
                   const article_list& articles,
                   const categories_t& categories)
 {
   using namespace hemplate;  // NOLINT
 
-  std::ofstream ost(name + ".html");
-  std::stringstream strs;
+  const article index(name, categories);
 
-  strs << html::h1(name);
-  strs << html::ul().set("class", "index");
+  index.write_header(ost);
+  ost << html::h1(name);
+  ost << html::ul().set("class", "index");
   for (const auto& article : articles)
   {
     if (article->is_hidden()) continue;
 
     const auto& filename = article->get_filename();
-    const auto& title = article->get_title();
+    const auto& title    = article->get_title();
     const auto& date     = article->get_date();
 
-    strs << html::li()
-                .add(html::div(std::format("{} - ", date)))
-                .add(html::div().add(html::a(title).set("href", filename)));
+    ost << html::li()
+               .add(html::span(std::format("{} -&nbsp", date)))
+               .add(html::a(title).set("href", filename));
   };
-  strs << html::ul();
-
-  article index(name, categories);
-  index.write(strs.str(), ost);
+  ost << html::ul();
+  index.write_footer(ost);
 }
 
 void create_atom(std::ostream& ost,
@@ -48,8 +48,10 @@ void create_atom(std::ostream& ost,
 
   static const char* base    = "https://dimitrijedobrota.com/blog";
   static const char* loc     = "https://dimitrijedobrota.com/blog/atom.feed";
-  static const char* updated = "2003-12-13T18:30:02Z";
   static const char* summary = "Click on the article link to read...";
+
+  auto const time =
+      std::chrono::current_zone()->to_local(std::chrono::system_clock::now());
 
   const elementList content = std::accumulate(
       begin(articles),
@@ -58,11 +60,13 @@ void create_atom(std::ostream& ost,
       [](elementList&& list, const auto& article)
       {
         const auto filename = article->get_filename();
+        const auto date     = article->get_date();
+
         list.add(atom::entry()
                      .add(atom::title(filename))
-                     .add(atom::link().set(
+                     .add(atom::link(" ").set(
                          "href", std::format("{}/{}", base, filename)))
-                     .add(atom::updated(updated))
+                     .add(atom::updated(date))
                      .add(atom::summary(summary)));
         return std::move(list);
       });
@@ -70,14 +74,13 @@ void create_atom(std::ostream& ost,
   ost << xml();
   ost << atom::feed();
   ost << atom::title(name);
-  ost << atom::link().set("href", base);
-  ost << atom::link({{"rel", "self"}, {"href", loc}});
+  ost << atom::link(" ").set("href", base);
+  ost << atom::link(" ", {{"rel", "self"}, {"href", loc}});
   ost << atom::id(base);
-  ost << atom::updated(updated);
+  ost << atom::updated(std::format("{:%Y-%m-%d %X}", time));
   ost << atom::author().add(atom::name(name));
-  ost << atom::feed();
   ost << content;
-  ost << atom::feed(content);
+  ost << atom::feed();
 }
 
 void create_rss(std::ostream& ost,
@@ -90,8 +93,7 @@ void create_rss(std::ostream& ost,
   static const char* email       = "mail@dimitrijedobrota.com";
   static const char* base        = "https://dimitrijedobrota.com/blog";
   static const char* description = "Contents of Dimitrije Dobrota's webpage";
-  static const char* loc     = "https://dimitrijedobrota.com/blog/index.rss";
-  static const char* updated = "2003-12-13T18:30:02Z";
+  static const char* loc = "https://dimitrijedobrota.com/blog/index.rss";
 
   const elementList content = std::accumulate(
       begin(articles),
@@ -100,11 +102,13 @@ void create_rss(std::ostream& ost,
       [](elementList&& list, const auto& article)
       {
         const auto filename = article->get_filename();
+        const auto date     = article->get_date();
+
         list.add(rss::item()
                      .add(rss::title(filename))
                      .add(rss::link(std::format("{}/{}", base, filename)))
                      .add(rss::guid(std::format("{}/{}", base, filename)))
-                     .add(rss::pubDate(updated))
+                     .add(rss::pubDate(date))
                      .add(rss::author(std::format("{} ({})", email, author))));
         return std::move(list);
       });
