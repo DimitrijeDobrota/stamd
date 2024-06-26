@@ -154,25 +154,28 @@ int main(int argc, char* argv[])
        [](const auto& lft, const auto& rht)
        { return lft->get_date() > rht->get_date(); });
 
-  std::ofstream atom(args.output_dir / "atom.xml");
   std::ofstream rss(args.output_dir / "rss.xml");
-  std::ofstream sitemap(args.output_dir / "sitemap.xml");
-  std::ofstream robots(args.output_dir / "robots.txt");
-  std::ofstream index(args.output_dir / "index.html");
-
-  create_sitemap(sitemap, all_articles);
-  create_robots(robots);
-
   create_rss(rss, "index", all_articles);
+
+  std::ofstream atom(args.output_dir / "atom.xml");
   create_atom(atom, "index", all_articles);
 
-  create_index(index, "index", all_articles, all_categories);
+  std::ofstream index(args.output_dir / "index.html");
+
+  all_articles.push_back(
+      create_index(index, "index", all_articles, all_categories));
   for (const auto& [category, articles] : category_map)
   {
     auto ctgry = category;
     std::ofstream ost(args.output_dir / (normalize(ctgry) + ".html"));
-    create_index(ost, category, articles, {});
+    all_articles.push_back(create_index(ost, category, articles, {}));
   }
+
+  std::ofstream robots(args.output_dir / "robots.txt");
+  create_robots(robots);
+
+  std::ofstream sitemap(args.output_dir / "sitemap.xml");
+  create_sitemap(sitemap, all_articles);
 
   return 0;
 }

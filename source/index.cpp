@@ -61,16 +61,16 @@ std::string to_rfc3339(const std::string& date)
   return std::format(rfc3339_f, chrono_time);
 }
 
-void create_index(std::ostream& ost,
-                  const std::string& name,
-                  const article_list& articles,
-                  const categories_t& categories)
+std::shared_ptr<article> create_index(std::ostream& ost,
+                                      const std::string& name,
+                                      const article_list& articles,
+                                      const categories_t& categories)
 {
   using namespace hemplate;  // NOLINT
 
-  const article index(name, categories);
+  auto index = std::make_shared<article>(name, categories);
 
-  index.write_header(ost);
+  index->write_header(ost);
   ost << html::h1(name);
   ost << html::ul().set("class", "index");
   for (const auto& article : articles)
@@ -86,7 +86,9 @@ void create_index(std::ostream& ost,
                .add(html::a(title).set("href", filename));
   };
   ost << html::ul();
-  index.write_footer(ost);
+  index->write_footer(ost);
+
+  return index;
 }
 
 void create_atom(std::ostream& ost,
