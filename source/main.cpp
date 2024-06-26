@@ -128,8 +128,6 @@ int main(int argc, char* argv[])
     std::ofstream ofs(out);
     std::stringstream sst;
 
-    std::cerr << out.string() << std::endl;
-
     sst << ifs.rdbuf();
 
     article->write_header(ofs);

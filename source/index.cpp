@@ -12,6 +12,55 @@
 
 namespace stamd {
 
+std::tm get_time(const std::string& date)
+{
+  int year  = 0;
+  int month = 0;
+  int day   = 0;
+
+  std::sscanf(date.c_str(), "%d-%d-%d", &year, &month, &day);
+
+  tm time = {
+      .tm_sec  = 0,
+      .tm_min  = 0,
+      .tm_hour = 0,
+      .tm_mday = day,
+      .tm_mon  = month - 1,
+      .tm_year = year - 1900,
+  };
+
+  return time;
+}
+
+#define rfc882_f "{:%a, %d %b %Y %H:%M:%S %z}"  // NOLINT
+#define rfc3339_f "{:%FT%H:%M:%SZ}"  // NOLINT
+
+std::string to_rfc882(const std::string& date)
+{
+  using namespace std::chrono;  // NOLINT
+
+  tm time = get_time(date);
+
+  const auto tmp = std::mktime(&time);
+  const auto chrono_time =
+      time_point_cast<seconds>(system_clock::from_time_t(tmp));
+
+  return std::format(rfc882_f, chrono_time);
+}
+
+std::string to_rfc3339(const std::string& date)
+{
+  using namespace std::chrono;  // NOLINT
+
+  tm time = get_time(date);
+
+  const auto tmp = std::mktime(&time);
+  const auto chrono_time =
+      time_point_cast<seconds>(system_clock::from_time_t(tmp));
+
+  return std::format(rfc3339_f, chrono_time);
+}
+
 void create_index(std::ostream& ost,
                   const std::string& name,
                   const article_list& articles,
@@ -47,29 +96,11 @@ void create_atom(std::ostream& ost,
   using namespace hemplate;  // NOLINT
 
   static const char* base    = "https://dimitrijedobrota.com/blog";
-  static const char* loc     = "https://dimitrijedobrota.com/blog/atom.feed";
+  static const char* loc     = "https://dimitrijedobrota.com/blog/atom.xml";
   static const char* summary = "Click on the article link to read...";
 
   auto const time =
       std::chrono::current_zone()->to_local(std::chrono::system_clock::now());
-
-  const elementList content = std::accumulate(
-      begin(articles),
-      end(articles),
-      elementList(),
-      [](elementList&& list, const auto& article)
-      {
-        const auto filename = article->get_filename();
-        const auto date     = article->get_date();
-
-        list.add(atom::entry()
-                     .add(atom::title(filename))
-                     .add(atom::link(" ").set(
-                         "href", std::format("{}/{}", base, filename)))
-                     .add(atom::updated(date))
-                     .add(atom::summary(summary)));
-        return std::move(list);
-      });
 
   ost << xml();
   ost << atom::feed();
@@ -77,9 +108,24 @@ void create_atom(std::ostream& ost,
   ost << atom::link(" ").set("href", base);
   ost << atom::link(" ", {{"rel", "self"}, {"href", loc}});
   ost << atom::id(base);
-  ost << atom::updated(std::format("{:%Y-%m-%d %X}", time));
+  ost << atom::updated(std::format(rfc3339_f, time));
   ost << atom::author().add(atom::name(name));
-  ost << content;
+
+  for (const auto& article : articles)
+  {
+    const auto filename = article->get_filename();
+    const auto title    = article->get_title();
+    const auto date     = article->get_date();
+    const auto path     = std::format("{}/{}", base, filename);
+
+    ost << atom::entry()
+               .add(atom::title(title))
+               .add(atom::id(path))
+               .add(atom::link(" ").set("href", path))
+               .add(atom::updated(to_rfc3339(date)))
+               .add(atom::summary(summary));
+  }
+
   ost << atom::feed();
 }
 
@@ -93,25 +139,7 @@ void create_rss(std::ostream& ost,
   static const char* email       = "mail@dimitrijedobrota.com";
   static const char* base        = "https://dimitrijedobrota.com/blog";
   static const char* description = "Contents of Dimitrije Dobrota's webpage";
-  static const char* loc = "https://dimitrijedobrota.com/blog/index.rss";
-
-  const elementList content = std::accumulate(
-      begin(articles),
-      end(articles),
-      elementList(),
-      [](elementList&& list, const auto& article)
-      {
-        const auto filename = article->get_filename();
-        const auto date     = article->get_date();
-
-        list.add(rss::item()
-                     .add(rss::title(filename))
-                     .add(rss::link(std::format("{}/{}", base, filename)))
-                     .add(rss::guid(std::format("{}/{}", base, filename)))
-                     .add(rss::pubDate(date))
-                     .add(rss::author(std::format("{} ({})", email, author))));
-        return std::move(list);
-      });
+  static const char* loc         = "https://dimitrijedobrota.com/blog/rss.xml";
 
   ost << xml();
   ost << rss::rss();
@@ -122,7 +150,20 @@ void create_rss(std::ostream& ost,
   ost << rss::generator("stamd");
   ost << rss::language("en-us");
   ost << rss::atomLink().set("href", loc);
-  ost << content;
+
+  for (const auto& article : articles)
+  {
+    const auto filename = article->get_filename();
+    const auto date     = article->get_date();
+
+    ost << rss::item()
+               .add(rss::title(filename))
+               .add(rss::link(std::format("{}/{}", base, filename)))
+               .add(rss::guid(std::format("{}/{}", base, filename)))
+               .add(rss::pubDate(to_rfc882(date)))
+               .add(rss::author(std::format("{} ({})", email, author)));
+  }
+
   ost << rss::channel();
   ost << rss::rss();
 }
