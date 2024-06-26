@@ -4,7 +4,7 @@ include(cmake/prelude.cmake)
 
 project(
     stamd
-    VERSION 0.2.1
+    VERSION 0.2.2
     DESCRIPTION "Static Markdown Page Generator"
     HOMEPAGE_URL "https://git.dimitrijedobrota.com/stamd.git"
     LANGUAGES CXX

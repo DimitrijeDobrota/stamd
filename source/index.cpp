@@ -25,12 +25,14 @@ void create_index(const std::string& name,
   for (const auto& article : articles)
   {
     if (article->is_hidden()) continue;
+
+    const auto& filename = article->get_filename();
     const auto& title = article->get_title();
-    const auto& date  = article->get_date();
+    const auto& date     = article->get_date();
 
     strs << html::li()
                 .add(html::div(std::format("{} - ", date)))
-                .add(html::div().add(html::a(title).set("href", title)));
+                .add(html::div().add(html::a(title).set("href", filename)));
   };
   strs << html::ul();
 
@@ -55,11 +57,11 @@ void create_atom(std::ostream& ost,
       elementList(),
       [](elementList&& list, const auto& article)
       {
-        const auto title = article->get_title();
+        const auto filename = article->get_filename();
         list.add(atom::entry()
-                     .add(atom::title(title))
+                     .add(atom::title(filename))
                      .add(atom::link().set(
-                         "href", std::format("{}/{}.html", base, title)))
+                         "href", std::format("{}/{}", base, filename)))
                      .add(atom::updated(updated))
                      .add(atom::summary(summary)));
         return std::move(list);
@@ -83,6 +85,7 @@ void create_rss(std::ostream& ost,
                 const article_list& articles)
 {
   using namespace hemplate;  // NOLINT
+
   static const char* author      = "Dimitrije Dobrota";
   static const char* email       = "mail@dimitrijedobrota.com";
   static const char* base        = "https://dimitrijedobrota.com/blog";
@@ -96,11 +99,11 @@ void create_rss(std::ostream& ost,
       elementList(),
       [](elementList&& list, const auto& article)
       {
-        const auto title = article->get_title();
+        const auto filename = article->get_filename();
         list.add(rss::item()
-                     .add(rss::title(title))
-                     .add(rss::link(std::format("{}/{}.html", base, title)))
-                     .add(rss::guid(std::format("{}/{}.html", base, title)))
+                     .add(rss::title(filename))
+                     .add(rss::link(std::format("{}/{}", base, filename)))
+                     .add(rss::guid(std::format("{}/{}", base, filename)))
                      .add(rss::pubDate(updated))
                      .add(rss::author(std::format("{} ({})", email, author))));
         return std::move(list);
@@ -130,11 +133,11 @@ void create_sitemap(std::ostream& ost, const article_list& articles)
   ost << sitemap::urlset();
   for (const auto& article : articles)
   {
-    const auto& title = article->get_title();
-    const auto& date  = article->get_date();
+    const auto& name = article->get_filename();
+    const auto& date = article->get_date();
 
     ost << sitemap::url()
-               .add(sitemap::loc(std::format("{}/{}", base, title)))
+               .add(sitemap::loc(std::format("{}/{}.html", base, name)))
                .add(sitemap::lastmod(date));
   }
   ost << sitemap::urlset();

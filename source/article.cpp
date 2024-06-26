@@ -1,4 +1,5 @@
 #include <format>
+#include <iostream>
 #include <numeric>
 
 #include "article.hpp"
@@ -8,18 +9,47 @@
 
 #include "utility.hpp"
 
+std::optional<std::string> article::get(const std::string& key) const
+{
+  const auto itr = m_symbols.find(key);
+  if (itr == end(m_symbols))
+  {
+    std::cerr << "Warning: getting invalid value for: " << key << std::endl;
+    return {};
+  }
+  return itr->second;
+}
+
+std::string article::get_filename() const
+{
+  return m_symbols.find("filename")->second;
+}
+
+std::string article::get_date() const
+{
+  return get("date").value_or("0000-00-00");
+}
+
+std::string article::get_title() const
+{
+  return get("title").value_or(get_filename());
+}
+
+std::string article::get_language() const
+{
+  return get("language").value_or("en");
+}
+
 void article::print_nav(std::ostream& ost)
 {
   using namespace hemplate;  // NOLINT
 
   static const char* base = "https://dimitrijedobrota.com/blog";
 
-  ost << html::div()
-             .add(html::nav()
-                      .add(html::a("&lt;-- back", {{"class", "back"}}))
-                      .add(html::a("index", {{"href", base}}))
-                      .add(html::a("hime --&gt;", {{"href", "/"}})))
-             .add(html::hr());
+  ost << html::nav()
+             .add(html::a("&lt;-- back", {{"class", "back"}}))
+             .add(html::a("index", {{"href", base}}))
+             .add(html::a("home --&gt;", {{"href", "/"}}));
 }
 
 void article::print_categories(std::ostream& ost,
@@ -27,20 +57,16 @@ void article::print_categories(std::ostream& ost,
 {
   using namespace hemplate;  // NOLINT
 
-  ost << html::div(
-      attributeList({{"class", "categories"}}),
-      std::accumulate(
-          begin(categories),
-          end(categories),
-          elementList(html::h3("Categories: "), html::p()),
-          [](elementList&& list, std::string ctgry)
-          {
-            normalize(ctgry);
-            list.add(
-                html::a(ctgry, {{"href", std::format("./{}.html", ctgry)}}));
-            return std::move(list);
-          })
-          .add(html::p()));
+  ost << html::nav().set("class", "categories");
+  ost << html::h3("Categories: ");
+  ost << html::p();
+  for (auto ctgry : categories)
+  {
+    normalize(ctgry);
+    ost << html::a(ctgry, {{"href", std::format("./{}.html", ctgry)}});
+  }
+  ost << html::p();
+  ost << html::nav();
 }
 
 void article::write(const std::string& data, std::ostream& ost)
@@ -48,8 +74,10 @@ void article::write(const std::string& data, std::ostream& ost)
   using namespace hemplate;  // NOLINT
 
   static const char* description_s =
-      "Dimitrije Dobrota's personal site. You can find my daily findings in a "
-      "form of articles on my blog as well as various programming projects.";
+      "Dimitrije Dobrota's personal site. You can find my daily "
+      "findings in a "
+      "form of articles on my blog as well as various programming "
+      "projects.";
 
   static const attributeList icon  = {{"rel", "icon"}, {"type", "image/png"}};
   static const attributeList style = {{"rel", "stylesheet"},
@@ -83,21 +111,37 @@ void article::write(const std::string& data, std::ostream& ost)
              .set("type", "checkbox")
              .set("id", "theme_switch")
              .set("class", "theme_switch");
+
+  ost << html::div().set("id", "content");
+
+  if (!m_nonav)
+  {
+    ost << html::header();
+    print_nav(ost);
+    ost << html::hr();
+    ost << html::header();
+  }
+
   ost << html::main();
-  ost << html::div().set("class", "content");
   ost << html::label(" ")
              .set("for", "theme_switch")
              .set("class", "switch_label");
 
-  if (!m_nonav) print_nav(ost);
   if (!m_categories.empty()) print_categories(ost, m_categories);
 
   ost << data;
 
-  if (!m_nonav) print_nav(ost);
+  ost << html::main();
+
+  if (!m_nonav)
+  {
+    ost << html::footer();
+    ost << html::hr();
+    print_nav(ost);
+    ost << html::footer();
+  }
 
   ost << html::div();
-  ost << html::main();
   ost << html::script(" ").set("source", "/scripts/main.js");
   ost << html::body();
   ost << html::html();

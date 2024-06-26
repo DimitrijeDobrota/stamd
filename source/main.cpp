@@ -1,3 +1,4 @@
+#include <filesystem>
 #include <fstream>
 #include <iostream>
 #include <sstream>
@@ -17,7 +18,7 @@ void preprocess(article& article, std::istream& ist)
 
   while (std::getline(ist, line))
   {
-    if (line.empty()) continue;
+    if (line.empty()) break;
     if (line[0] != '@') break;
 
     {
@@ -31,11 +32,11 @@ void preprocess(article& article, std::istream& ist)
 
     if (key == "hidden") article.set_hidden(true);
     else if (key == "nonav") article.set_nonav(true);
-    else if (key != "categories") article.emplace(key, value);
+    else if (key != "categories") article.insert(key, value);
     else
     {
       std::istringstream iss(value);
-      while (std::getline(iss, value, ',')) article.emplace(trim(value));
+      while (std::getline(iss, value, ',')) article.insert(trim(value));
     }
   }
 }
@@ -43,7 +44,10 @@ void preprocess(article& article, std::istream& ist)
 struct arguments_t
 {
   std::string output_dir = ".";
-  std::vector<std::string> articles;
+  std::vector<std::filesystem::path> files;
+  bool index = false;
+
+  std::string base = "https://dimitrijedobrota.com/blog";
 };
 
 int parse_opt(int key, const char* arg, poafloc::Parser* parser)
@@ -54,8 +58,14 @@ int parse_opt(int key, const char* arg, poafloc::Parser* parser)
     case 'o':
       args->output_dir = arg;
       break;
+    case 'b':
+      args->base = arg;
+      break;
+    case 'i':
+      args->index = true;
+      break;
     case poafloc::ARG:
-      args->articles.emplace_back(arg);
+      args->files.emplace_back(arg);
       break;
     default:
       break;
@@ -66,6 +76,8 @@ int parse_opt(int key, const char* arg, poafloc::Parser* parser)
 // NOLINTBEGIN
 static const poafloc::option_t options[] = {
     {"output", 'o', "DIR", 0, "Output directory"},
+    {"index", 'i', 0, 0, "Generate all of the indices"},
+    {"base", 'b', "URL", 0, "Base URL for the content"},
     {0},
 };
 
@@ -96,15 +108,18 @@ int main(int argc, char* argv[])
   article_list all_articles;
   maddy::Parser parser;
 
-  for (const auto& name : args.articles)
+  for (const auto& path : args.files)
   {
-    std::ofstream ofs(name + ".out");
-    std::ifstream ifs(name);
+    const std::string filename = path.stem().string() + ".html";
 
-    all_articles.push_back(make_shared<article>(name));
+    std::ifstream ifs(path.string());
+    all_articles.push_back(make_shared<article>(filename));
 
     auto& article = all_articles.back();
     preprocess(*article, ifs);
+
+    // filename can change in preprocessing phase
+    std::ofstream ofs(article->get_filename());
     article->write(parser.Parse(ifs), ofs);
 
     if (!article->is_hidden())
@@ -114,6 +129,13 @@ int main(int argc, char* argv[])
         category_map[ctgry].push_back(article);
     }
   }
+
+  if (!args.index) return 0;
+
+  sort(begin(all_articles),
+       end(all_articles),
+       [](const auto& lft, const auto& rht)
+       { return lft->get_date() > rht->get_date(); });
 
   std::ofstream atom("atom.xml");
   std::ofstream rss("rss.xml");
