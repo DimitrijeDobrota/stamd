@@ -105,11 +105,12 @@ void create_atom(std::ostream& ost,
   ost << xml();
   ost << atom::feed();
   ost << atom::title(name);
-  ost << atom::link(" ").set("href", base);
-  ost << atom::link(" ", {{"rel", "self"}, {"href", loc}});
   ost << atom::id(base);
   ost << atom::updated(std::format(rfc3339_f, time));
   ost << atom::author().add(atom::name(name));
+  ost << atom::link(" ", {{"rel", "self"}, {"href", loc}});
+  ost << atom::link(
+      " ", {{"href", base}, {"rel", "alternate"}, {"type", "text/html"}});
 
   for (const auto& article : articles)
   {

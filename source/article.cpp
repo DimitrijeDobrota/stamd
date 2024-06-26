@@ -60,10 +60,11 @@ void article::print_categories(std::ostream& ost,
   ost << html::nav().set("class", "categories");
   ost << html::h3("Categories: ");
   ost << html::p();
-  for (auto ctgry : categories)
+  for (const auto& category : categories)
   {
+    auto ctgry = category;
     normalize(ctgry);
-    ost << html::a(ctgry, {{"href", std::format("./{}.html", ctgry)}});
+    ost << html::a(category, {{"href", std::format("./{}.html", ctgry)}});
   }
   ost << html::p();
   ost << html::nav();
@@ -90,6 +91,16 @@ void article::write_header(std::ostream& ost) const
   static const attributeList description = {{"name", "description"},
                                             {"content", description_s}};
 
+  static const attributeList rss = {{"rel", "alternate"},
+                                    {"type", "application/atom+xml"},
+                                    {"title", "RSS feed"},
+                                    {"href", "/blog/rss.xml"}};
+
+  static const attributeList atom = {{"rel", "alternate"},
+                                     {"type", "application/atom+xml"},
+                                     {"title", "Atom feed"},
+                                     {"href", "/blog/atom.xml"}};
+
   ost << html::doctype();
   ost << html::html().set("lang", get_language());
   ost << html::head()
@@ -99,6 +110,8 @@ void article::write_header(std::ostream& ost) const
              .add(html::meta(description))
              .add(html::link(style).set("href", "/css/index.css"))
              .add(html::link(style).set("href", "/css/colors.css"))
+             .add(html::link(rss))
+             .add(html::link(atom))
              .add(html::link(icon)
                       .set("sizes", "32x32")
                       .set("href", "/img/favicon-32x32.png"))
@@ -147,7 +160,7 @@ void article::write_footer(std::ostream& ost) const
   ost << html::div();
   ost << html::script(" ")
              .set("type", "text/javascript")
-             .set("source", "/scripts/main.js");
+             .set("src", "/scripts/main.js");
   ost << html::body();
   ost << html::html();
 }
