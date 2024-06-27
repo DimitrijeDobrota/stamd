@@ -25,7 +25,7 @@ find_package(hemplate 0.1 CONFIG REQUIRED)
 add_library(
     stamd_lib OBJECT
     source/article.cpp
-    source/index.cpp
+    source/indexer.cpp
 )
 
 target_link_libraries(stamd_lib PUBLIC hemplate::hemplate)

@@ -5,12 +5,26 @@
 #include <numeric>
 #include <sstream>
 
-#include "index.hpp"
+#include "indexer.hpp"
 
 #include <hemplate/attribute.hpp>
 #include <hemplate/classes.hpp>
 
 namespace stamd {
+
+indexer::article_s& indexer::add(const article_s& article)
+{
+  m_articles.emplace_back(article);
+  return m_articles.back();
+}
+
+void indexer::sort()
+{
+  std::sort(begin(m_articles),
+            end(m_articles),
+            [](const auto& lft, const auto& rht)
+            { return lft->get_date() > rht->get_date(); });
+}
 
 std::tm get_time(const std::string& date)
 {
@@ -61,19 +75,18 @@ std::string to_rfc3339(const std::string& date)
   return std::format(rfc3339_f, chrono_time);
 }
 
-std::shared_ptr<article> create_index(std::ostream& ost,
-                                      const std::string& name,
-                                      const article_list& articles,
-                                      const categories_t& categories)
+void indexer::create_index(std::ostream& ost,
+                           const std::string& name,
+                           const categories_t& categories)
 {
   using namespace hemplate;  // NOLINT
 
-  auto index = std::make_shared<article>(name, categories);
+  auto index = std::make_shared<stamd::article>(name, categories);
 
   index->write_header(ost);
   ost << html::h1(name);
   ost << html::ul().set("class", "index");
-  for (const auto& article : articles)
+  for (const auto& article : m_articles)
   {
     if (article->is_hidden()) continue;
 
@@ -82,24 +95,20 @@ std::shared_ptr<article> create_index(std::ostream& ost,
     const auto& date     = article->get_date();
 
     ost << html::li()
-               .add(html::span(std::format("{} -&nbsp", date)))
+               .add(html::span(date + " -&nbsp"))
                .add(html::a(title).set("href", filename));
   };
   ost << html::ul();
   index->write_footer(ost);
 
-  return index;
+  add(index);
 }
 
-void create_atom(std::ostream& ost,
-                 const std::string& name,
-                 const article_list& articles)
+void indexer::create_atom(std::ostream& ost, const std::string& name) const
 {
   using namespace hemplate;  // NOLINT
 
-  static const char* base    = "https://dimitrijedobrota.com/blog";
-  static const char* loc     = "https://dimitrijedobrota.com/blog/atom.xml";
-  static const char* summary = "Click on the article link to read...";
+  const std::string& base_url = m_options.base_url;
 
   auto const time =
       std::chrono::current_zone()->to_local(std::chrono::system_clock::now());
@@ -107,24 +116,25 @@ void create_atom(std::ostream& ost,
   ost << xml();
   ost << atom::feed();
   ost << atom::title(name);
-  ost << atom::id(base);
+  ost << atom::id(base_url);
   ost << atom::updated(std::format(rfc3339_f, time));
   ost << atom::author().add(atom::name(name));
-  ost << atom::link(" ", {{"rel", "self"}, {"href", loc}});
+  ost << atom::link(" ",
+                    {{"rel", "self"}, {"href", base_url + "blog/atom.xml"}});
   ost << atom::link(
-      " ", {{"href", base}, {"rel", "alternate"}, {"type", "text/html"}});
+      " ", {{"href", base_url}, {"rel", "alternate"}, {"type", "text/html"}});
 
-  for (const auto& article : articles)
+  for (const auto& article : m_articles)
   {
     const auto filename = article->get_filename();
     const auto title    = article->get_title();
     const auto date     = article->get_date();
-    const auto path     = std::format("{}/{}", base, filename);
+    const auto summary  = article->get("summary").value_or(m_options.summary);
 
     ost << atom::entry()
                .add(atom::title(title))
-               .add(atom::id(path))
-               .add(atom::link(" ").set("href", path))
+               .add(atom::id(base_url + filename))
+               .add(atom::link(" ").set("href", base_url + filename))
                .add(atom::updated(to_rfc3339(date)))
                .add(atom::summary(summary));
   }
@@ -132,37 +142,35 @@ void create_atom(std::ostream& ost,
   ost << atom::feed();
 }
 
-void create_rss(std::ostream& ost,
-                const std::string& name,
-                const article_list& articles)
+void indexer::create_rss(std::ostream& ost, const std::string& name) const
 {
   using namespace hemplate;  // NOLINT
 
-  static const char* author      = "Dimitrije Dobrota";
-  static const char* email       = "mail@dimitrijedobrota.com";
-  static const char* base        = "https://dimitrijedobrota.com/blog";
-  static const char* description = "Contents of Dimitrije Dobrota's webpage";
-  static const char* loc         = "https://dimitrijedobrota.com/blog/rss.xml";
+  const std::string& base_url    = m_options.base_url;
+  const std::string& description = m_options.description;
 
   ost << xml();
   ost << rss::rss();
   ost << rss::channel();
+
   ost << rss::title(name);
-  ost << rss::link(base);
+  ost << rss::link(base_url);
   ost << rss::description(description);
   ost << rss::generator("stamd");
   ost << rss::language("en-us");
-  ost << rss::atomLink().set("href", loc);
+  ost << rss::atomLink().set("href", base_url + "blog/rss.xml");
 
-  for (const auto& article : articles)
+  for (const auto& article : m_articles)
   {
     const auto filename = article->get_filename();
     const auto date     = article->get_date();
+    const auto author   = article->get("author").value_or(m_options.author);
+    const auto email    = article->get("email").value_or(m_options.email);
 
     ost << rss::item()
                .add(rss::title(filename))
-               .add(rss::link(std::format("{}/{}", base, filename)))
-               .add(rss::guid(std::format("{}/{}", base, filename)))
+               .add(rss::link(base_url + filename))
+               .add(rss::guid(base_url + filename))
                .add(rss::pubDate(to_rfc882(date)))
                .add(rss::author(std::format("{} ({})", email, author)));
   }
@@ -171,32 +179,32 @@ void create_rss(std::ostream& ost,
   ost << rss::rss();
 }
 
-void create_sitemap(std::ostream& ost, const article_list& articles)
+void indexer::create_sitemap(std::ostream& ost) const
 {
   using namespace hemplate;  // NOLINT
 
-  static const char* base = "https://dimitrijedobrota.com/blog";
+  static const std::string& base_url = m_options.base_url;
 
   ost << xml();
   ost << sitemap::urlset();
-  for (const auto& article : articles)
+  for (const auto& article : m_articles)
   {
-    const auto& name = article->get_filename();
-    const auto& date = article->get_date();
+    const auto& filename = article->get_filename();
+    const auto& date     = article->get_date();
 
     ost << sitemap::url()
-               .add(sitemap::loc(std::format("{}/{}.html", base, name)))
+               .add(sitemap::loc(base_url + filename))
                .add(sitemap::lastmod(date));
   }
   ost << sitemap::urlset();
 }
 
-void create_robots(std::ostream& ost)
+void indexer::create_robots(std::ostream& ost) const
 {
-  static const char* base = "https://dimitrijedobrota.com/blog";
+  static const std::string& base_url = m_options.base_url;
 
   ost << "User-agent: *";
-  ost << std::format("Sitemap: {}/sitemap.xml", base);
+  ost << std::format("Sitemap: {}/sitemap.xml", base_url);
 }
 
 }  // namespace stamd

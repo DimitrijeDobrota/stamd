@@ -6,6 +6,8 @@
 #include <unordered_map>
 #include <vector>
 
+namespace stamd {
+
 class article
 {
 public:
@@ -52,3 +54,5 @@ private:
   categories_t m_categories;
   symbols_t m_symbols;
 };
+
+}  // namespace stamd

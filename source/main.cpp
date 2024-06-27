@@ -7,10 +7,10 @@
 #include <poafloc/poafloc.hpp>
 
 #include "article.hpp"
-#include "index.hpp"
+#include "indexer.hpp"
 #include "utility.hpp"
 
-void preprocess(article& article, std::istream& ist)
+void preprocess(stamd::article& article, std::istream& ist)
 {
   std::string line;
   std::string key;
@@ -47,7 +47,7 @@ struct arguments_t
   std::vector<std::filesystem::path> files;
   bool index = false;
 
-  std::string base = "https://dimitrijedobrota.com/blog";
+  stamd::indexer::options_t options;
 };
 
 int parse_opt(int key, const char* arg, poafloc::Parser* parser)
@@ -58,11 +58,23 @@ int parse_opt(int key, const char* arg, poafloc::Parser* parser)
     case 'o':
       args->output_dir = arg;
       break;
-    case 'b':
-      args->base = arg;
-      break;
     case 'i':
       args->index = true;
+      break;
+    case 'b':
+      args->options.base_url = arg;
+      break;
+    case 'a':
+      args->options.author = arg;
+      break;
+    case 'e':
+      args->options.email = arg;
+      break;
+    case 'd':
+      args->options.description = arg;
+      break;
+    case 's':
+      args->options.summary = arg;
       break;
     case poafloc::ARG:
       args->files.emplace_back(arg);
@@ -74,12 +86,21 @@ int parse_opt(int key, const char* arg, poafloc::Parser* parser)
 }
 
 // NOLINTBEGIN
+// clang-format off
 static const poafloc::option_t options[] = {
+    {0, 0, 0, 0, "Output mode", 1},
     {"output", 'o', "DIR", 0, "Output directory"},
     {"index", 'i', 0, 0, "Generate all of the indices"},
+    {0, 0, 0, 0, "General information", 2},
     {"base", 'b', "URL", 0, "Base URL for the content"},
+    {"author", 'a', "NAME", 0, "Name of the author, if not specified in article"},
+    {"email", 'e', "EMAIL", 0, "Email of the author, if not specified in article"},
+    {"summary", 's', "SMRY", 0, "A summary, if not specified in article"},
+    {"description", 'd', "DESC", 0, "Description of RSS feed"},
+    {0, 0, 0, 0, "Informational Options", -1},
     {0},
 };
+// clang-format on
 
 static const poafloc::arg_t arg {
     options,
@@ -99,8 +120,6 @@ int main(int argc, char* argv[])
 {
   using namespace stamd;  // NOLINT
 
-  using category_map_t = std::unordered_map<std::string, article_list>;
-
   arguments_t args;
 
   if (poafloc::parse(&arg, argc, argv, 0, &args) != 0)
@@ -109,23 +128,24 @@ int main(int argc, char* argv[])
     return 1;
   }
 
+  using category_map_t =
+      std::unordered_map<std::string, indexer::article_list>;
+
+  stamd::indexer::categories_t categories;
   category_map_t category_map;
-  categories_t all_categories;
-  article_list all_articles;
+  indexer indexer(args.options);
 
   for (const auto& path : args.files)
   {
     const std::string filename = path.stem().string() + ".html";
 
     std::ifstream ifs(path.string());
-    all_articles.push_back(make_shared<article>(filename));
+    auto& article = indexer.add(make_shared<stamd::article>(filename));
 
-    auto& article = all_articles.back();
     preprocess(*article, ifs);
 
     // filename can change in preprocessing phase
-    std::filesystem::path out = args.output_dir / article->get_filename();
-    std::ofstream ofs(out);
+    std::ofstream ofs(args.output_dir / article->get_filename());
     std::stringstream sst;
 
     sst << ifs.rdbuf();
@@ -141,41 +161,37 @@ int main(int argc, char* argv[])
 
     if (!article->is_hidden())
     {
-      all_categories.merge(article->get_categories());
-      for (const auto& ctgry : article->get_categories())
-        category_map[ctgry].push_back(article);
+      categories.merge(article->get_categories());
+      for (const auto& category : article->get_categories())
+        category_map[category].emplace_back(article);
     }
   }
 
   if (!args.index) return 0;
 
-  sort(begin(all_articles),
-       end(all_articles),
-       [](const auto& lft, const auto& rht)
-       { return lft->get_date() > rht->get_date(); });
+  indexer.sort();
 
   std::ofstream rss(args.output_dir / "rss.xml");
-  create_rss(rss, "index", all_articles);
+  indexer.create_rss(rss, "index");
 
   std::ofstream atom(args.output_dir / "atom.xml");
-  create_atom(atom, "index", all_articles);
+  indexer.create_atom(atom, "index");
 
   std::ofstream index(args.output_dir / "index.html");
+  indexer.create_index(index, "blog index", categories);
 
-  all_articles.push_back(
-      create_index(index, "index", all_articles, all_categories));
   for (const auto& [category, articles] : category_map)
   {
     auto ctgry = category;
     std::ofstream ost(args.output_dir / (normalize(ctgry) + ".html"));
-    all_articles.push_back(create_index(ost, category, articles, {}));
+    indexer.create_index(ost, category, {});
   }
 
   std::ofstream robots(args.output_dir / "robots.txt");
-  create_robots(robots);
+  indexer.create_robots(robots);
 
   std::ofstream sitemap(args.output_dir / "sitemap.xml");
-  create_sitemap(sitemap, all_articles);
+  indexer.create_sitemap(sitemap);
 
   return 0;
 }

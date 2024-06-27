@@ -9,12 +9,14 @@
 
 #include "utility.hpp"
 
+namespace stamd {
+
 std::optional<std::string> article::get(const std::string& key) const
 {
   const auto itr = m_symbols.find(key);
   if (itr == end(m_symbols))
   {
-    std::cerr << "Warning: getting invalid value for: " << key << std::endl;
+    // std::cerr << "Warning: getting invalid value for: " << key << std::endl;
     return {};
   }
   return itr->second;
@@ -158,9 +160,9 @@ void article::write_footer(std::ostream& ost) const
   }
 
   ost << html::div();
-  ost << html::script(" ")
-             .set("type", "text/javascript")
-             .set("src", "/scripts/main.js");
+  ost << html::script(" ").set("src", "/scripts/main.js");
   ost << html::body();
   ost << html::html();
 }
+
+}  // namespace stamd
