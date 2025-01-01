@@ -89,6 +89,7 @@ void indexer::create_index(std::ostream& ost,
   for (const auto& article : m_articles)
   {
     if (article->is_hidden()) continue;
+    if (name != "blog" && !article->get_categories().count(name)) continue;
 
     const auto& filename = article->get_filename();
     const auto& title    = article->get_title();
@@ -100,8 +101,6 @@ void indexer::create_index(std::ostream& ost,
   };
   ost << html::ul();
   index->write_footer(ost);
-
-  add(index);
 }
 
 void indexer::create_atom(std::ostream& ost, const std::string& name) const

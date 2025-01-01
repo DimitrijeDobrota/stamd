@@ -178,7 +178,7 @@ int main(int argc, char* argv[])
   indexer.create_atom(atom, "index");
 
   std::ofstream index(args.output_dir / "index.html");
-  indexer.create_index(index, "blog index", categories);
+  indexer.create_index(index, "blog", categories);
 
   for (const auto& [category, articles] : category_map)
   {
