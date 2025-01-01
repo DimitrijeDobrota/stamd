@@ -4,7 +4,7 @@ include(cmake/prelude.cmake)
 
 project(
     stamd
-    VERSION 0.2.7
+    VERSION 0.2.8
     DESCRIPTION "Static Markdown Page Generator"
     HOMEPAGE_URL "https://git.dimitrijedobrota.com/stamd.git"
     LANGUAGES CXX
@@ -28,7 +28,7 @@ add_library(
     source/indexer.cpp
 )
 
-target_link_libraries(stamd_lib PUBLIC hemplate::hemplate)
+target_link_libraries(stamd_lib PUBLIC hemplate::hemplate poafloc::poafloc)
 
 target_include_directories(
     stamd_lib ${warning_guard}
