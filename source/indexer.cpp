@@ -1,14 +1,18 @@
 #include <algorithm>
 #include <chrono>
+#include <ctime>
 #include <format>
-#include <fstream>
-#include <numeric>
-#include <sstream>
+#include <iterator>
+#include <memory>
+#include <ostream>
+#include <string>
 
 #include "indexer.hpp"
 
 #include <hemplate/attribute.hpp>
 #include <hemplate/classes.hpp>
+
+#include "article.hpp"
 
 namespace stamd {
 
@@ -32,16 +36,19 @@ std::tm get_time(const std::string& date)
   int month = 0;
   int day   = 0;
 
-  std::sscanf(date.c_str(), "%d-%d-%d", &year, &month, &day);
+  std::sscanf(date.c_str(), "%d-%d-%d", &year, &month, &day);  // NOLINT
 
-  tm time = {
-      .tm_sec  = 0,
-      .tm_min  = 0,
-      .tm_hour = 0,
-      .tm_mday = day,
-      .tm_mon  = month - 1,
-      .tm_year = year - 1900,
-  };
+  tm time = {.tm_sec    = 0,
+             .tm_min    = 0,
+             .tm_hour   = 0,
+             .tm_mday   = day,
+             .tm_mon    = month - 1,
+             .tm_year   = year - 1900,
+             .tm_wday   = 0,
+             .tm_yday   = 0,
+             .tm_isdst  = 0,
+             .tm_gmtoff = 0,
+             .tm_zone   = nullptr};
 
   return time;
 }
@@ -89,7 +96,7 @@ void indexer::create_index(std::ostream& ost,
   for (const auto& article : m_articles)
   {
     if (article->is_hidden()) continue;
-    if (name != "blog" && !article->get_categories().count(name)) continue;
+    if (name != "blog" && !article->get_categories().contains(name)) continue;
 
     const auto& filename = article->get_filename();
     const auto& title    = article->get_title();

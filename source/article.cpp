@@ -1,6 +1,8 @@
 #include <format>
 #include <iostream>
-#include <numeric>
+#include <iterator>
+#include <optional>
+#include <string>
 
 #include "article.hpp"
 

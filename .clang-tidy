@@ -24,6 +24,8 @@ Checks: "*,\
 "
 WarningsAsErrors: ''
 CheckOptions:
+  - key: 'misc-include-cleaner.IgnoreHeaders'
+    value: 'poafloc.*;md4c.*'
   - key: 'bugprone-argument-comment.StrictMode'
     value: 'true'
 # Prefer using enum classes with 2 values for parameters instead of bools

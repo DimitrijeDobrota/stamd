@@ -1,7 +1,11 @@
 #include <filesystem>
 #include <fstream>
 #include <iostream>
+#include <memory>
 #include <sstream>
+#include <string>
+#include <unordered_map>
+#include <vector>
 
 #include <md4c-html.h>
 #include <poafloc/poafloc.hpp>
