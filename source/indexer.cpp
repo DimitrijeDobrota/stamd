@@ -3,7 +3,6 @@
 #include <ctime>
 #include <format>
 #include <iterator>
-#include <memory>
 #include <ostream>
 #include <string>
 
@@ -16,13 +15,17 @@
 
 namespace stamd {
 
-indexer::article_s& indexer::add(const article_s& article)
+void Indexer::add(const article_s& article)
 {
   m_articles.emplace_back(article);
-  return m_articles.back();
 }
 
-void indexer::sort()
+void Indexer::add(categories_t categories)
+{
+  m_categories.merge(categories);
+}
+
+void Indexer::sort()
 {
   std::sort(begin(m_articles),
             end(m_articles),
@@ -82,21 +85,18 @@ std::string to_rfc3339(const std::string& date)
   return std::format(rfc3339_f, chrono_time);
 }
 
-void indexer::create_index(std::ostream& ost,
-                           const std::string& name,
-                           const categories_t& categories)
+void Indexer::create_index(std::ostream& ost, const std::string& name)
 {
   using namespace hemplate;  // NOLINT
 
-  auto index = std::make_shared<stamd::article>(name, categories);
+  const Article index(name, m_options, m_categories);
 
-  index->write_header(ost);
+  index.write_header(ost);
   ost << html::h1(name);
   ost << html::ul().set("class", "index");
   for (const auto& article : m_articles)
   {
     if (article->is_hidden()) continue;
-    if (name != "blog" && !article->get_categories().contains(name)) continue;
 
     const auto& filename = article->get_filename();
     const auto& title    = article->get_title();
@@ -107,10 +107,10 @@ void indexer::create_index(std::ostream& ost,
                .add(html::a(title).set("href", filename));
   };
   ost << html::ul();
-  index->write_footer(ost);
+  index.write_footer(ost);
 }
 
-void indexer::create_atom(std::ostream& ost, const std::string& name) const
+void Indexer::create_atom(std::ostream& ost, const std::string& name) const
 {
   using namespace hemplate;  // NOLINT
 
@@ -148,7 +148,7 @@ void indexer::create_atom(std::ostream& ost, const std::string& name) const
   ost << atom::feed();
 }
 
-void indexer::create_rss(std::ostream& ost, const std::string& name) const
+void Indexer::create_rss(std::ostream& ost, const std::string& name) const
 {
   using namespace hemplate;  // NOLINT
 
@@ -185,7 +185,7 @@ void indexer::create_rss(std::ostream& ost, const std::string& name) const
   ost << rss::rss();
 }
 
-void indexer::create_sitemap(std::ostream& ost) const
+void Indexer::create_sitemap(std::ostream& ost) const
 {
   using namespace hemplate;  // NOLINT
 
@@ -205,7 +205,7 @@ void indexer::create_sitemap(std::ostream& ost) const
   ost << sitemap::urlset();
 }
 
-void indexer::create_robots(std::ostream& ost) const
+void Indexer::create_robots(std::ostream& ost) const
 {
   static const std::string& base_url = m_options.base_url;
 

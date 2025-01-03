@@ -5,36 +5,25 @@
 #include <vector>
 
 #include "article.hpp"
+#include "options.hpp"
 
 namespace stamd {
 
-class indexer
+class Indexer
 {
 public:
-  using article_s = std::shared_ptr<article>;
+  using article_s = std::shared_ptr<Article>;
 
   using article_list = std::vector<article_s>;
-  using categories_t = article::categories_t;
+  using categories_t = Article::categories_t;
 
-  struct options_t
-  {
-    std::string base_url;
-    std::string author;
-    std::string email;
-    std::string description;
-    std::string summary;
-  };
-
-  explicit indexer(options_t options)
+  explicit Indexer(options_t options)
       : m_options(std::move(options))
   {
-    if (m_options.base_url.empty() || m_options.base_url.back() != '/')
-    {
-      m_options.base_url += '/';
-    }
   }
 
-  article_s& add(const article_s& article);
+  void add(const article_s& article);
+  void add(categories_t categories);
 
   void sort();
 
@@ -43,14 +32,11 @@ public:
 
   void create_atom(std::ostream& ost, const std::string& name) const;
   void create_rss(std::ostream& ost, const std::string& name) const;
-  void create_index(std::ostream& ost,
-                    const std::string& name,
-                    const categories_t& categories);
-
-  void create_categories() const;
+  void create_index(std::ostream& ost, const std::string& name);
 
 private:
   options_t m_options;
+  categories_t m_categories;
 
   article_list m_articles;
 };

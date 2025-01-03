@@ -38,11 +38,15 @@ See the [BUILDING](BUILDING.md) document.
 
 ## Version History
 
+- 0.3
+    * Generate sitemap.xml and robots.txt
+    * Generate rss.xml and atom.txt feeds
+    * Configurable links
+    * Category indexes
 - 0.2
     * C++ rewrite
     * Improved stability
     * Improve readability
-    * Generate sitemap.xml and robots.txt
 
 - 0.1
     * Quick and dirty proof of concept written in C

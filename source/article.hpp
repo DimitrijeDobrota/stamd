@@ -5,16 +5,21 @@
 #include <string>
 #include <unordered_map>
 
+#include "options.hpp"
+
 namespace stamd {
 
-class article
+class Article
 {
 public:
   using symbols_t    = std::unordered_map<std::string, std::string>;
   using categories_t = std::set<std::string>;
 
-  explicit article(std::string filename, categories_t categories = {})
+  explicit Article(std::string filename,
+                   options_t options,
+                   categories_t categories = {})
       : m_categories(std::move(categories))
+      , m_options(std::move(options))
       , m_symbols({{"filename", filename}})
   {
   }
@@ -43,7 +48,7 @@ public:
   std::string get_language() const;
 
 private:
-  static void print_nav(std::ostream& ost);
+  static void print_nav(std::ostream& ost, const std::string& base);
   static void print_categories(std::ostream& ost,
                                const categories_t& categories);
 
@@ -51,6 +56,7 @@ private:
   bool m_nonav  = false;
 
   categories_t m_categories;
+  options_t m_options;
   symbols_t m_symbols;
 };
 

@@ -13,7 +13,7 @@
 
 namespace stamd {
 
-std::optional<std::string> article::get(const std::string& key) const
+std::optional<std::string> Article::get(const std::string& key) const
 {
   const auto itr = m_symbols.find(key);
   if (itr == end(m_symbols))
@@ -24,31 +24,29 @@ std::optional<std::string> article::get(const std::string& key) const
   return itr->second;
 }
 
-std::string article::get_filename() const
+std::string Article::get_filename() const
 {
   return m_symbols.find("filename")->second;
 }
 
-std::string article::get_date() const
+std::string Article::get_date() const
 {
   return get("date").value_or("0000-00-00");
 }
 
-std::string article::get_title() const
+std::string Article::get_title() const
 {
   return get("title").value_or(get_filename());
 }
 
-std::string article::get_language() const
+std::string Article::get_language() const
 {
   return get("language").value_or("en");
 }
 
-void article::print_nav(std::ostream& ost)
+void Article::print_nav(std::ostream& ost, const std::string& base)
 {
   using namespace hemplate;  // NOLINT
-
-  static const char* base = "https://dimitrijedobrota.com/blog";
 
   ost << html::nav()
              .add(html::a("&lt;-- back", {{"class", "back"}}))
@@ -56,7 +54,7 @@ void article::print_nav(std::ostream& ost)
              .add(html::a("home --&gt;", {{"href", "/"}}));
 }
 
-void article::print_categories(std::ostream& ost,
+void Article::print_categories(std::ostream& ost,
                                const categories_t& categories)
 {
   using namespace hemplate;  // NOLINT
@@ -74,7 +72,7 @@ void article::print_categories(std::ostream& ost,
   ost << html::nav();
 }
 
-void article::write_header(std::ostream& ost) const
+void Article::write_header(std::ostream& ost) const
 {
   using namespace hemplate;  // NOLINT
 
@@ -134,7 +132,7 @@ void article::write_header(std::ostream& ost) const
   if (!m_nonav)
   {
     ost << html::header();
-    print_nav(ost);
+    print_nav(ost, m_options.base_url + "blog");
     ost << html::hr();
     ost << html::header();
   }
@@ -147,7 +145,7 @@ void article::write_header(std::ostream& ost) const
   if (!m_categories.empty()) print_categories(ost, m_categories);
 }
 
-void article::write_footer(std::ostream& ost) const
+void Article::write_footer(std::ostream& ost) const
 {
   using namespace hemplate;  // NOLINT
 
@@ -157,7 +155,7 @@ void article::write_footer(std::ostream& ost) const
   {
     ost << html::footer();
     ost << html::hr();
-    print_nav(ost);
+    print_nav(ost, m_options.base_url + "blog");
     ost << html::footer();
   }
 
