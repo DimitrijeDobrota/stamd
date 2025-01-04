@@ -1,6 +1,7 @@
 #include <format>
 #include <iostream>
 #include <iterator>
+#include <numeric>
 #include <optional>
 #include <string>
 
@@ -26,7 +27,7 @@ std::optional<std::string> Article::get(const std::string& key) const
 
 std::string Article::get_filename() const
 {
-  return m_symbols.find("filename")->second;
+  return m_filename;
 }
 
 std::string Article::get_date() const
@@ -42,6 +43,31 @@ std::string Article::get_title() const
 std::string Article::get_language() const
 {
   return get("language").value_or("en");
+}
+
+std::string Article::get_desciprtion() const
+{
+  return get("description").value_or(m_options.description);
+}
+
+std::string Article::get_author() const
+{
+  return get("author").value_or(m_options.author);
+}
+
+std::string Article::get_keywords() const
+{
+  static const auto concat = [](const categories_t& categories)
+  {
+    if (categories.empty()) return std::string();
+    return std::accumulate(std::next(std::begin(categories)),
+                           std::end(categories),
+                           *categories.begin(),
+                           [](const auto& acc, const auto& str)
+                           { return acc + ", " + str; });
+  };
+
+  return get("keywords").value_or(concat(m_categories));
 }
 
 void Article::print_nav(std::ostream& ost, const std::string& base)
@@ -76,48 +102,40 @@ void Article::write_header(std::ostream& ost) const
 {
   using namespace hemplate;  // NOLINT
 
-  static const char* description_s =
-      "Dimitrije Dobrota's personal site. You can find my daily "
-      "findings in a "
-      "form of articles on my blog as well as various programming "
-      "projects.";
-
-  static const attributeList icon  = {{"rel", "icon"}, {"type", "image/png"}};
-  static const attributeList style = {{"rel", "stylesheet"},
-                                      {"type", "text/css"}};
-
-  static const attributeList viewport = {
-      {"content", "width=device-width, initial-scale=1"},
-      {"name", "viewport"}};
-
-  static const attributeList description = {{"name", "description"},
-                                            {"content", description_s}};
-
-  static const attributeList rss = {{"rel", "alternate"},
-                                    {"type", "application/atom+xml"},
-                                    {"title", "RSS feed"},
-                                    {"href", "/blog/rss.xml"}};
-
-  static const attributeList atom = {{"rel", "alternate"},
-                                     {"type", "application/atom+xml"},
-                                     {"title", "Atom feed"},
-                                     {"href", "/blog/atom.xml"}};
-
   ost << html::doctype();
   ost << html::html().set("lang", get_language());
   ost << html::head()
              .add(html::title(get_title()))
-             .add(html::meta(viewport))
+             // Meta tags
              .add(html::meta({{"charset", "UTF-8"}}))
-             .add(html::meta(description))
-             .add(html::link(style).set("href", "/css/index.css"))
-             .add(html::link(style).set("href", "/css/colors.css"))
-             .add(html::link(rss))
-             .add(html::link(atom))
-             .add(html::link(icon)
+             .add(html::meta({{"name", "author"}, {"content", get_author()}}))
+             .add(html::meta(
+                 {{"name", "description"}, {"content", get_desciprtion()}}))
+             .add(html::meta(
+                 {{"name", "keywords"}, {"content", get_keywords()}}))
+             .add(html::meta(
+                 {{"content", "width=device-width, initial-scale=1"},
+                  {"name", "viewport"}}))
+             // Stylesheets
+             .add(html::link({{"rel", "stylesheet"}, {"type", "text/css"}})
+                      .set("href", "/css/index.css"))
+             .add(html::link({{"rel", "stylesheet"}, {"type", "text/css"}})
+                      .set("href", "/css/colors.css"))
+             // Rss feed
+             .add(html::link({{"rel", "alternate"},
+                              {"type", "application/atom+xml"},
+                              {"title", "RSS feed"},
+                              {"href", "/blog/rss.xml"}}))
+             // Atom feed
+             .add(html::link({{"rel", "alternate"},
+                              {"type", "application/atom+xml"},
+                              {"title", "Atom feed"},
+                              {"href", "/blog/atom.xml"}}))
+             // Icons
+             .add(html::link({{"rel", "icon"}, {"type", "image/png"}})
                       .set("sizes", "32x32")
                       .set("href", "/img/favicon-32x32.png"))
-             .add(html::link(icon)
+             .add(html::link({{"rel", "icon"}, {"type", "image/png"}})
                       .set("sizes", "16x16")
                       .set("href", "/img/favicon-16x16.png"));
 

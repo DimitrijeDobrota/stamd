@@ -18,9 +18,9 @@ public:
   explicit Article(std::string filename,
                    options_t options,
                    categories_t categories = {})
-      : m_categories(std::move(categories))
+      : m_filename(std::move(filename))
+      , m_categories(std::move(categories))
       , m_options(std::move(options))
-      , m_symbols({{"filename", filename}})
   {
   }
 
@@ -46,6 +46,9 @@ public:
   std::string get_date() const;
   std::string get_title() const;
   std::string get_language() const;
+  std::string get_desciprtion() const;
+  std::string get_author() const;
+  std::string get_keywords() const;
 
 private:
   static void print_nav(std::ostream& ost, const std::string& base);
@@ -55,6 +58,7 @@ private:
   bool m_hidden = false;
   bool m_nonav  = false;
 
+  std::string m_filename;
   categories_t m_categories;
   options_t m_options;
   symbols_t m_symbols;
