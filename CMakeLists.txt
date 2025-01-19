@@ -4,7 +4,7 @@ include(cmake/prelude.cmake)
 
 project(
     stamd
-    VERSION 0.3.1
+    VERSION 0.3.2
     DESCRIPTION "Static Markdown Page Generator"
     HOMEPAGE_URL "https://git.dimitrijedobrota.com/stamd.git"
     LANGUAGES CXX
@@ -17,7 +17,7 @@ include(cmake/variables.cmake)
 
 find_package(md4c CONFIG REQUIRED)
 find_package(poafloc 1 CONFIG REQUIRED)
-find_package(hemplate 0.1 CONFIG REQUIRED)
+find_package(hemplate 0.2.2 CONFIG REQUIRED)
 
 
 # ---- Declare library ----

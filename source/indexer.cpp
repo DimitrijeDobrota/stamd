@@ -2,8 +2,10 @@
 #include <chrono>
 #include <ctime>
 #include <format>
+#include <iomanip>
 #include <iterator>
 #include <ostream>
+#include <sstream>
 #include <string>
 
 #include "indexer.hpp"
@@ -33,56 +35,12 @@ void Indexer::sort()
             { return lft->get_date() > rht->get_date(); });
 }
 
-std::tm get_time(const std::string& date)
+int64_t parse_time(const std::string& date)
 {
-  int year  = 0;
-  int month = 0;
-  int day   = 0;
-
-  std::sscanf(date.c_str(), "%d-%d-%d", &year, &month, &day);  // NOLINT
-
-  tm time = {.tm_sec    = 0,
-             .tm_min    = 0,
-             .tm_hour   = 0,
-             .tm_mday   = day,
-             .tm_mon    = month - 1,
-             .tm_year   = year - 1900,
-             .tm_wday   = 0,
-             .tm_yday   = 0,
-             .tm_isdst  = 0,
-             .tm_gmtoff = 0,
-             .tm_zone   = nullptr};
-
-  return time;
-}
-
-#define rfc882_f "{:%a, %d %b %Y %H:%M:%S %z}"  // NOLINT
-#define rfc3339_f "{:%FT%H:%M:%SZ}"  // NOLINT
-
-std::string to_rfc882(const std::string& date)
-{
-  using namespace std::chrono;  // NOLINT
-
-  tm time = get_time(date);
-
-  const auto tmp = std::mktime(&time);
-  const auto chrono_time =
-      time_point_cast<seconds>(system_clock::from_time_t(tmp));
-
-  return std::format(rfc882_f, chrono_time);
-}
-
-std::string to_rfc3339(const std::string& date)
-{
-  using namespace std::chrono;  // NOLINT
-
-  tm time = get_time(date);
-
-  const auto tmp = std::mktime(&time);
-  const auto chrono_time =
-      time_point_cast<seconds>(system_clock::from_time_t(tmp));
-
-  return std::format(rfc3339_f, chrono_time);
+  std::tm tms = {};
+  std::stringstream stream(date);
+  stream >> std::get_time(&tms, "%Y-%m-%d");
+  return std::mktime(&tms);
 }
 
 void Indexer::create_index(std::ostream& ost, const std::string& name)
@@ -116,14 +74,16 @@ void Indexer::create_atom(std::ostream& ost, const std::string& name) const
 
   const std::string& base_url = m_options.base_url;
 
-  auto const time =
-      std::chrono::current_zone()->to_local(std::chrono::system_clock::now());
+  auto const time = std::chrono::current_zone()
+                        ->to_local(std::chrono::system_clock::now())
+                        .time_since_epoch()
+      / std::chrono::seconds(1);
 
   ost << xml();
   ost << atom::feed();
   ost << atom::title(name);
   ost << atom::id(base_url);
-  ost << atom::updated(std::format(rfc3339_f, time));
+  ost << atom::updated(atom::format_time(time));
   ost << atom::author().add(atom::name(name));
   ost << atom::link(" ",
                     {{"rel", "self"}, {"href", base_url + "blog/atom.xml"}});
@@ -141,7 +101,7 @@ void Indexer::create_atom(std::ostream& ost, const std::string& name) const
                .add(atom::title(title))
                .add(atom::id(base_url + filename))
                .add(atom::link(" ").set("href", base_url + filename))
-               .add(atom::updated(to_rfc3339(date)))
+               .add(atom::updated(atom::format_time(parse_time((date)))))
                .add(atom::summary(summary));
   }
 
@@ -177,7 +137,7 @@ void Indexer::create_rss(std::ostream& ost, const std::string& name) const
                .add(rss::title(filename))
                .add(rss::link(base_url + filename))
                .add(rss::guid(base_url + filename))
-               .add(rss::pubDate(to_rfc882(date)))
+               .add(rss::pubDate(rss::format_time(parse_time(date))))
                .add(rss::author(std::format("{} ({})", email, author)));
   }
 
