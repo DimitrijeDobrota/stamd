@@ -2,7 +2,8 @@
 
 #include <string>
 
-namespace stamd {
+namespace stamd
+{
 
 struct options_t
 {

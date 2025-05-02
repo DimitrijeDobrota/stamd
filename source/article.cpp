@@ -1,5 +1,4 @@
 #include <format>
-#include <iostream>
 #include <iterator>
 #include <numeric>
 #include <optional>
@@ -12,13 +11,13 @@
 
 #include "utility.hpp"
 
-namespace stamd {
+namespace stamd
+{
 
 std::optional<std::string> Article::get(const std::string& key) const
 {
   const auto itr = m_symbols.find(key);
-  if (itr == end(m_symbols))
-  {
+  if (itr == end(m_symbols)) {
     // std::cerr << "Warning: getting invalid value for: " << key << std::endl;
     return {};
   }
@@ -59,128 +58,177 @@ std::string Article::get_keywords() const
 {
   static const auto concat = [](const categories_t& categories)
   {
-    if (categories.empty()) return std::string();
-    return std::accumulate(std::next(std::begin(categories)),
-                           std::end(categories),
-                           *categories.begin(),
-                           [](const auto& acc, const auto& str)
-                           { return acc + ", " + str; });
+    if (categories.empty()) {
+      return std::string();
+    }
+
+    return std::accumulate(
+        std::next(std::begin(categories)),
+        std::end(categories),
+        *categories.begin(),
+        [](const auto& acc, const auto& str)
+        {
+          return acc + ", " + str;
+        }
+    );
   };
 
   return get("keywords").value_or(concat(m_categories));
 }
 
-void Article::print_nav(std::ostream& ost, const std::string& base)
+hemplate::element Article::print_nav(const std::string& base)
 {
-  using namespace hemplate;  // NOLINT
+  using namespace hemplate::html;  // NOLINT
 
-  ost << html::nav()
-             .add(html::a("&lt;-- back", {{"class", "back"}}))
-             .add(html::a("index", {{"href", base}}))
-             .add(html::a("home --&gt;", {{"href", "/"}}));
+  return nav {
+      a {
+          {{"class", "back"}},
+          "&lt;-- back",
+      },
+      a {
+          {{"href", base}},
+          "index",
+      },
+      a {
+          {{"href", "/"}},
+          "home --&gt;",
+      },
+  };
 }
 
-void Article::print_categories(std::ostream& ost,
-                               const categories_t& categories)
+hemplate::element Article::print_categories(const categories_t& categories)
 {
-  using namespace hemplate;  // NOLINT
+  using namespace hemplate::html;  // NOLINT
 
-  ost << html::nav().set("class", "categories");
-  ost << html::h3("Categories: ");
-  ost << html::p();
-  for (const auto& category : categories)
-  {
-    auto ctgry = category;
-    normalize(ctgry);
-    ost << html::a(category, {{"href", std::format("./{}.html", ctgry)}});
-  }
-  ost << html::p();
-  ost << html::nav();
+  return nav {
+      {{"class", "categories"}},
+      h3 {"Categories: "},
+      p {
+          transform(
+              categories,
+              [](const auto& category)
+              {
+                auto ctgry = category;
+                normalize(ctgry);
+                return a {
+                    {{"href", std::format("./{}.html", ctgry)}},
+                    category,
+                };
+              }
+          ),
+      },
+  };
 }
 
-void Article::write_header(std::ostream& ost) const
+hemplate::element Article::write(const content_t& content) const
 {
-  using namespace hemplate;  // NOLINT
+  using namespace hemplate::html;  // NOLINT
 
-  ost << html::doctype();
-  ost << html::html().set("lang", get_language());
-  ost << html::head()
-             .add(html::title(get_title()))
-             // Meta tags
-             .add(html::meta({{"charset", "UTF-8"}}))
-             .add(html::meta({{"name", "author"}, {"content", get_author()}}))
-             .add(html::meta(
-                 {{"name", "description"}, {"content", get_desciprtion()}}))
-             .add(html::meta(
-                 {{"name", "keywords"}, {"content", get_keywords()}}))
-             .add(html::meta(
-                 {{"content", "width=device-width, initial-scale=1"},
-                  {"name", "viewport"}}))
-             // Stylesheets
-             .add(html::link({{"rel", "stylesheet"}, {"type", "text/css"}})
-                      .set("href", "/css/index.css"))
-             .add(html::link({{"rel", "stylesheet"}, {"type", "text/css"}})
-                      .set("href", "/css/colors.css"))
-             // Rss feed
-             .add(html::link({{"rel", "alternate"},
-                              {"type", "application/atom+xml"},
-                              {"title", "RSS feed"},
-                              {"href", "/blog/rss.xml"}}))
-             // Atom feed
-             .add(html::link({{"rel", "alternate"},
-                              {"type", "application/atom+xml"},
-                              {"title", "Atom feed"},
-                              {"href", "/blog/atom.xml"}}))
-             // Icons
-             .add(html::link({{"rel", "icon"}, {"type", "image/png"}})
-                      .set("sizes", "32x32")
-                      .set("href", "/img/favicon-32x32.png"))
-             .add(html::link({{"rel", "icon"}, {"type", "image/png"}})
-                      .set("sizes", "16x16")
-                      .set("href", "/img/favicon-16x16.png"));
+  return element {
+      doctype {},
+      html {
+          {{"lang", get_language()}},
+          head {
+              title {get_title()},
+          },
 
-  ost << html::body();
-  ost << html::input()
-             .set("type", "checkbox")
-             .set("id", "theme_switch")
-             .set("class", "theme_switch");
+          // Meta tags
+          meta {
+              {{"charset", "UTF-8"}},
+          },
+          meta {
+              {{"name", "author"}, {"content", get_author()}},
+          },
+          meta {{
+              {"name", "description"},
+              {"content", get_desciprtion()},
+          }},
+          meta {{
+              {"name", "keywords"},
+              {"content", get_keywords()},
+          }},
+          meta {
+              {{"content", "width=device-width, initial-scale=1"},
+               {"name", "viewport"}}
+          },
 
-  ost << html::div().set("id", "content");
+          // Stylesheets
+          link {{
+              {"rel", "stylesheet"},
+              {"type", "text/css"},
+              {"href", "/css/index.css"},
+          }},
 
-  if (!m_nonav)
-  {
-    ost << html::header();
-    print_nav(ost, m_options.base_url + "blog");
-    ost << html::hr();
-    ost << html::header();
-  }
+          link {{
+              {"rel", "stylesheet"},
+              {"type", "text/css"},
+              {"href", "/css/colors.css"},
+          }},
 
-  ost << html::main();
-  ost << html::label(" ")
-             .set("for", "theme_switch")
-             .set("class", "switch_label");
+          // Rss feed
+          link {{
+              {"rel", "alternate"},
+              {"type", "application/atom+xml"},
+              {"title", "RSS feed"},
+              {"href", "/blog/rss.xml"},
+          }},
 
-  if (!m_categories.empty()) print_categories(ost, m_categories);
-}
+          // Atom feed
+          link {{
+              {"rel", "alternate"},
+              {"type", "application/atom+xml"},
+              {"title", "Atom feed"},
+              {"href", "/blog/atom.xml"},
+          }},
 
-void Article::write_footer(std::ostream& ost) const
-{
-  using namespace hemplate;  // NOLINT
+          // Icons
+          link {{
+              {"rel", "icon"},
+              {"type", "image/png"},
+              {"sizes", "32x32"},
+              {"href", "/img/favicon-32x32.png"},
+          }},
 
-  ost << html::main();
-
-  if (!m_nonav)
-  {
-    ost << html::footer();
-    ost << html::hr();
-    print_nav(ost, m_options.base_url + "blog");
-    ost << html::footer();
-  }
-
-  ost << html::div();
-  ost << html::script(" ").set("src", "/scripts/main.js");
-  ost << html::body();
-  ost << html::html();
+          link {{
+              {"rel", "icon"},
+              {"type", "image/png"},
+              {"sizes", "16x16"},
+              {"href", "/img/favicon-16x16.png"},
+          }},
+          body {
+              input {{
+                  {"type", "checkbox"},
+                  {"id", "theme_switch"},
+                  {"class", "theme_switch"},
+              }},
+              hemplate::html::div {
+                  {{"id", "content"}},
+                  m_nonav ? element{} : [&] {
+                      return header {
+                          print_nav(m_options.base_url + "blog"),
+                          hr{},
+                      };
+                  }(),
+                  main {
+                      label {
+                          {{"for", "theme_switch"}, {"class", "switch_label"},},
+                      },
+                      m_categories.empty() ? element {} : [&]() {
+                          return print_categories(m_categories);
+                      }(),
+                      content(),
+                  },
+                  m_nonav ? element{} : [&] {
+                      return footer {
+                          hr{},
+                          print_nav(m_options.base_url + "blog"),
+                      };
+                  }(),
+              },
+              script {{{"set", "/scripts/main.js"}}},
+          },
+      },
+  };
 }
 
 }  // namespace stamd

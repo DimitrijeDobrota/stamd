@@ -4,28 +4,23 @@
 # modernize-use-nodiscard: too aggressive, attribute is situationally useful
 Checks: "*,\
   -altera-*,\
+  -boost*,\
+  -cppcoreguidelines-avoid-do-while,\
+  -cppcoreguidelines-pro-bounds-constant-array-index,\
   -fuchsia-*,\
-  -llvmlibc-*,\
-  -*-braces-around-statements,\
-  -bugprone-argument-comment,\
-  -bugprone-easily-swappable-parameters,\
-  -concurrency-mt-unsafe,\
-  -cppcoreguidelines-avoid-magic-numbers,\
-  -fuchsia-multiple-inheritance,\
-  -hicpp-signed-bitwise,\
+  -google-readability-todo,\
   -llvm-header-guard,\
   -llvm-include-order,\
-  -misc-no-recursion,\
+  -llvmlibc-*,\
+  -misc-include-cleaner,\
   -misc-non-private-member-variables-in-classes,\
-  -modernize-use-nodiscard,\
+  -misc-no-recursion,\
   -modernize-use-trailing-return-type,\
-  -readability-function-cognitive-complexity,\
-  -readability-magic-numbers
+  -readability-suspicious-call-argument,\
+  -*-ranges,\
 "
 WarningsAsErrors: ''
 CheckOptions:
-  - key: 'misc-include-cleaner.IgnoreHeaders'
-    value: 'poafloc.*;md4c.*'
   - key: 'bugprone-argument-comment.StrictMode'
     value: 'true'
 # Prefer using enum classes with 2 values for parameters instead of bools
@@ -61,7 +56,7 @@ CheckOptions:
   - key: 'readability-identifier-naming.AbstractClassCase'
     value: 'lower_case'
   - key: 'readability-identifier-naming.ClassCase'
-    value: 'CamelCase'
+    value: 'lower_case'
   - key: 'readability-identifier-naming.ClassConstantCase'
     value: 'lower_case'
   - key: 'readability-identifier-naming.ClassMemberCase'
@@ -83,9 +78,9 @@ CheckOptions:
   - key: 'readability-identifier-naming.ConstexprVariableCase'
     value: 'lower_case'
   - key: 'readability-identifier-naming.EnumCase'
-    value: 'CamelCase'
+    value: 'lower_case'
   - key: 'readability-identifier-naming.EnumConstantCase'
-    value: 'CamelCase'
+    value: 'lower_case'
   - key: 'readability-identifier-naming.FunctionCase'
     value: 'lower_case'
   - key: 'readability-identifier-naming.GlobalConstantCase'
@@ -139,7 +134,7 @@ CheckOptions:
   - key: 'readability-identifier-naming.PublicMethodCase'
     value: 'lower_case'
   - key: 'readability-identifier-naming.ScopedEnumConstantCase'
-    value: 'CamelCase'
+    value: 'lower_case'
   - key: 'readability-identifier-naming.StaticConstantCase'
     value: 'lower_case'
   - key: 'readability-identifier-naming.StaticVariableCase'
@@ -152,18 +147,22 @@ CheckOptions:
     value: 'CamelCase'
   - key: 'readability-identifier-naming.TypeAliasCase'
     value: 'lower_case'
+  - key: 'readability-identifier-naming.TypeAliasIgnoredRegexp'
+    value: 'N'
   - key: 'readability-identifier-naming.TypedefCase'
     value: 'lower_case'
   - key: 'readability-identifier-naming.TypeTemplateParameterCase'
     value: 'CamelCase'
-  - key: 'readability-identifier-naming.TypeTemplateParameterIgnoredRegexp'
-    value: 'expr-type'
   - key: 'readability-identifier-naming.UnionCase'
     value: 'lower_case'
   - key: 'readability-identifier-naming.ValueTemplateParameterCase'
-    value: 'CamelCase'
+    value: 'lower_case'
   - key: 'readability-identifier-naming.VariableCase'
     value: 'lower_case'
   - key: 'readability-identifier-naming.VirtualMethodCase'
     value: 'lower_case'
+  - key: 'readability-identifier-length.IgnoredVariableNames'
+    value: "^[abcdxyznm]$"
+  - key: 'readability-identifier-length.IgnoredParameterNames'
+    value: "^[abcdxyznm]$"
 ...

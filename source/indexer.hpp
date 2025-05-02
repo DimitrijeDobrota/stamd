@@ -7,7 +7,8 @@
 #include "article.hpp"
 #include "options.hpp"
 
-namespace stamd {
+namespace stamd
+{
 
 class Indexer
 {
@@ -30,9 +31,9 @@ public:
   void create_robots(std::ostream& ost) const;
   void create_sitemap(std::ostream& ost) const;
 
-  void create_atom(std::ostream& ost, const std::string& name) const;
-  void create_rss(std::ostream& ost, const std::string& name) const;
-  void create_index(std::ostream& ost, const std::string& name);
+  void create_atom(std::ostream& ost, const std::string& doc_title) const;
+  void create_rss(std::ostream& ost, const std::string& doc_title) const;
+  void create_index(std::ostream& ost, const std::string& doc_title);
 
 private:
   options_t m_options;

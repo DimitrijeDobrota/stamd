@@ -15,16 +15,19 @@
 #include "options.hpp"
 #include "utility.hpp"
 
+namespace
+{
+
 void preprocess(stamd::Article& article, std::istream& ist)
 {
   std::string line;
   std::string key;
   std::string value;
 
-  while (std::getline(ist, line))
-  {
-    if (line.empty()) break;
-    if (line[0] != '@') break;
+  while (std::getline(ist, line)) {
+    if (line.empty() && line[0] != '@') {
+      break;
+    }
 
     {
       std::istringstream iss(line.substr(1));
@@ -35,13 +38,17 @@ void preprocess(stamd::Article& article, std::istream& ist)
       trim(value);
     }
 
-    if (key == "hidden") article.set_hidden(true);
-    else if (key == "nonav") article.set_nonav(true);
-    else if (key != "categories") article.insert(key, value);
-    else
-    {
+    if (key == "hidden") {
+      article.set_hidden();
+    } else if (key == "nonav") {
+      article.set_nonav();
+    } else if (key != "categories") {
+      article.insert(key, value);
+    } else {
       std::istringstream iss(value);
-      while (std::getline(iss, value, ',')) article.insert(trim(value));
+      while (std::getline(iss, value, ',')) {
+        article.insert(trim(value));
+      }
     }
   }
 }
@@ -58,8 +65,7 @@ struct arguments_t
 int parse_opt(int key, const char* arg, poafloc::Parser* parser)
 {
   auto* args = static_cast<arguments_t*>(parser->input());
-  switch (key)
-  {
+  switch (key) {
     case 'o':
       args->output_dir = arg;
       break;
@@ -122,11 +128,7 @@ static const poafloc::arg_t arg {
 };
 // NOLINTEND
 
-void process_output(const MD_CHAR* str, MD_SIZE size, void* data)
-{
-  std::ofstream& ofs = *static_cast<std::ofstream*>(data);
-  ofs << std::string(str, size);
-}
+}  // namespace
 
 int main(int argc, char* argv[])
 {
@@ -134,8 +136,7 @@ int main(int argc, char* argv[])
 
   arguments_t args;
 
-  if (poafloc::parse(&arg, argc, argv, 0, &args) != 0)
-  {
+  if (poafloc::parse(&arg, argc, argv, 0, &args) != 0) {
     std::cerr << "There was an error while parsing arguments";
     return 1;
   }
@@ -145,8 +146,7 @@ int main(int argc, char* argv[])
   category_map_t category_map;
   Indexer index(args.options);
 
-  for (const auto& path : args.files)
-  {
+  for (const auto& path : args.files) {
     const std::string filename = path.stem().string() + ".html";
 
     const auto article = make_shared<stamd::Article>(filename, args.options);
@@ -161,26 +161,44 @@ int main(int argc, char* argv[])
     // filename can change in preprocessing phase
     std::ofstream ofs(args.output_dir / article->get_filename());
 
-    article->write_header(ofs);
-    md_html(sst.str().c_str(),
-            static_cast<MD_SIZE>(sst.str().size()),
-            process_output,
-            &ofs,
-            MD_DIALECT_GITHUB,
-            0);
-    article->write_footer(ofs);
+    ofs << article->write(
+        [&]() -> hemplate::element
+        {
+          std::string html;
 
-    if (article->is_hidden()) continue;
+          static auto process_output =
+              [](const MD_CHAR* str, MD_SIZE size, void* data)
+          {
+            std::string& buffer = *static_cast<std::string*>(data);
+            buffer += std::string(str, size);
+          };
+
+          md_html(
+              sst.str().c_str(),
+              static_cast<MD_SIZE>(sst.str().size()),
+              process_output,
+              &html,
+              MD_DIALECT_GITHUB,
+              0
+          );
+          return html;
+        }
+    );
+
+    if (article->is_hidden()) {
+      continue;
+    }
 
     index.add(article->get_categories());
-    for (const auto& category : article->get_categories())
-    {
+    for (const auto& category : article->get_categories()) {
       auto [it, _] = category_map.emplace(category, args.options);
       it->second.add(article);
     }
   }
 
-  if (!args.index) return 0;
+  if (!args.index) {
+    return 0;
+  }
 
   index.sort();
 
@@ -193,8 +211,7 @@ int main(int argc, char* argv[])
   std::ofstream ofs_index(args.output_dir / "index.html");
   index.create_index(ofs_index, "blog");
 
-  for (auto& [category_name, category_index] : category_map)
-  {
+  for (auto& [category_name, category_index] : category_map) {
     auto ctgry = category_name;
     std::ofstream ost(args.output_dir / (normalize(ctgry) + ".html"));
 
