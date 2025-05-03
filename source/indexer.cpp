@@ -77,10 +77,7 @@ void Indexer::create_index(std::ostream& ost, const std::string& doc_title)
 
                       return li {
                           span {article->get_date(), " -&nbsp"},
-                          a {
-                              {{"href", article->get_filename()}},
-                              article->get_title(),
-                          },
+                          aHref {article->get_filename(), article->get_title()},
                       };
                     }
                 ),
@@ -105,15 +102,8 @@ void Indexer::create_atom(std::ostream& ost, const std::string& doc_title) const
       id {base_url},
       updated {format_time_now()},
       author {name {author_name}},
-      link {{
-          {"href", base_url + "/atom.xml"},
-          {"rel", "self"},
-      }},
-      link {{
-          {"href", base_url + "blog/atom.xml"},
-          {"rel", "alternate"},
-          {"type", "text/html"},
-      }},
+      linkSelf {base_url + "/atom.xml"},
+      linkAlternate {base_url + "blog/atom.xml"},
       feed {
           transform(
               m_articles,
@@ -128,7 +118,7 @@ void Indexer::create_atom(std::ostream& ost, const std::string& doc_title) const
                 return entry {
                     title {art_title},
                     id {base_url + filename},
-                    link {{{"href", base_url + filename}}},
+                    linkHref {base_url + filename},
                     updated {format_time(parse_time((date)))},
                     summary {art_summary},
                 };

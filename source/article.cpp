@@ -110,8 +110,8 @@ hemplate::element Article::print_categories(const categories_t& categories)
               {
                 auto ctgry = category;
                 normalize(ctgry);
-                return a {
-                    {{"href", std::format("./{}.html", ctgry)}},
+                return aHref {
+                    std::format("./{}.html", ctgry),
                     category,
                 };
               }
@@ -125,76 +125,30 @@ hemplate::element Article::write(const content_t& content) const
   using namespace hemplate::html;  // NOLINT
 
   return element {
-      doctype {},
+    doctype {},
       html {
           {{"lang", get_language()}},
           head {
               title {get_title()},
+
+              metaUTF8 {},
+              metaName {"author", get_author()},
+              metaName {"description", get_desciprtion()},
+              metaName {"keywords", get_keywords()},
+              metaName {"viewport", "width=device-width, initial-scale=1"},
+
+              linkStylesheet {"/css/index.css"},
+              linkStylesheet {"/css/colors.css"},
+
+              element {
+                  linkRss {"RSS feed", "/blog/rss.xml"},
+                  linkAtom {"Atom feed", "/blog/atom.xml"},
+              },
+
+              // Icons
+              linkIcon {"32x32", "/img/favicon-32x32.png"},
+              linkIcon {"16x16", "/img/favicon-16x16.png"},
           },
-
-          // Meta tags
-          meta {
-              {{"charset", "UTF-8"}},
-          },
-          meta {
-              {{"name", "author"}, {"content", get_author()}},
-          },
-          meta {{
-              {"name", "description"},
-              {"content", get_desciprtion()},
-          }},
-          meta {{
-              {"name", "keywords"},
-              {"content", get_keywords()},
-          }},
-          meta {
-              {{"content", "width=device-width, initial-scale=1"},
-               {"name", "viewport"}}
-          },
-
-          // Stylesheets
-          link {{
-              {"rel", "stylesheet"},
-              {"type", "text/css"},
-              {"href", "/css/index.css"},
-          }},
-
-          link {{
-              {"rel", "stylesheet"},
-              {"type", "text/css"},
-              {"href", "/css/colors.css"},
-          }},
-
-          // Rss feed
-          link {{
-              {"rel", "alternate"},
-              {"type", "application/atom+xml"},
-              {"title", "RSS feed"},
-              {"href", "/blog/rss.xml"},
-          }},
-
-          // Atom feed
-          link {{
-              {"rel", "alternate"},
-              {"type", "application/atom+xml"},
-              {"title", "Atom feed"},
-              {"href", "/blog/atom.xml"},
-          }},
-
-          // Icons
-          link {{
-              {"rel", "icon"},
-              {"type", "image/png"},
-              {"sizes", "32x32"},
-              {"href", "/img/favicon-32x32.png"},
-          }},
-
-          link {{
-              {"rel", "icon"},
-              {"type", "image/png"},
-              {"sizes", "16x16"},
-              {"href", "/img/favicon-16x16.png"},
-          }},
           body {
               input {{
                   {"type", "checkbox"},
